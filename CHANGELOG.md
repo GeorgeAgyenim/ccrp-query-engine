@@ -14,6 +14,8 @@ settings; each change is listed here with what a host must do.
   buildings in the current view that meet attribute conditions and answers with the spatial population, the
   recorded count, the confirmed matches, the share among recorded buildings (undefined, with its reason, when
   nothing is recorded), "as of", the plan, and one templated sentence.
+  A question about a whole city is answered in a fraction of a second: on a made-up map of 20,000 buildings,
+  under 0.1 s, where the first version took 3.9 s (ADR-0012). Hosts need do nothing.
 - Plan format 1.0.0 (ADR-0010), published as `schemas/plan-1.schema.json`: a viewport area,
   filter steps in a CQL2-JSON subset (comparisons, `and`/`or`/`not`, `between`, `in`, the array functions,
   `recorded`, `blank`) and a number output. Invalid plans get plain-English messages naming the step and the
