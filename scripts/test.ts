@@ -1,5 +1,6 @@
 // The one test command (`npm test`). It:
-//  1. creates a throwaway database and applies colouring-core's migrations at the pinned commit;
+//  1. creates a throwaway database and applies colouring-core's migrations at the pinned commit
+//     (fetched with core's field definitions, which the catalogue tests read);
 //  2. copies it to the main test database and applies the engine's migrations;
 //  3. creates a test login granted the engine's group role, and loads the named fixtures;
 //  4. runs the suite with node:test; then
@@ -13,6 +14,7 @@
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { migrateUp } from '../src/migrations.ts';
 import {
@@ -20,7 +22,7 @@ import {
   CORE_EXTENSIONS,
   CORE_REPOSITORY,
   applyCoreMigrations,
-  fetchCoreMigrations,
+  fetchCore,
 } from './core-migrations.ts';
 import {
   TEST_VARIABLES,
@@ -64,7 +66,7 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
 let exitCode = 1;
 try {
   const started = Date.now();
-  const coreMigrations = await fetchCoreMigrations({
+  const coreCheckout = await fetchCore({
     repository: process.env['QUERY_ENGINE_TEST_CORE_REPOSITORY'] || CORE_REPOSITORY,
     commit: CORE_COMMIT,
     cacheRoot: `${root}.cache`,
@@ -77,7 +79,7 @@ try {
       await client.query(`CREATE EXTENSION IF NOT EXISTS ${client.escapeIdentifier(extension)}`);
     }
   });
-  const coreFiles = await applyCoreMigrations(coreMigrations, coreAdminUrl);
+  const coreFiles = await applyCoreMigrations(join(coreCheckout, 'migrations'), coreAdminUrl);
 
   await createDatabase(serverAdminUrl, mainDatabase, coreTemplate);
   const adminUrl = onDatabase(serverAdminUrl, mainDatabase);
@@ -123,6 +125,7 @@ try {
           [TEST_VARIABLES.mainEngineUrl]: engineUrl.toString(),
           [TEST_VARIABLES.coreTemplate]: coreTemplate,
           [TEST_VARIABLES.runId]: runId,
+          [TEST_VARIABLES.coreCheckout]: coreCheckout,
         },
       },
     );

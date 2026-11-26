@@ -13,8 +13,8 @@ const FOOTPRINT_SRID = 3857;
 
 type ColumnKind = 'integer' | 'geometry';
 
-// The parts of colouring-core's layout the engine reads. Later tickets add the attribute
-// columns, checked against the field catalogue.
+// The parts of colouring-core's layout the engine reads. The attribute columns are checked
+// against the field catalogue (src/catalogue.ts, checkFieldColumns).
 const REQUIRED_LAYOUT: ReadonlyArray<{ table: string; columns: Readonly<Record<string, ColumnKind>> }> = [
   { table: 'buildings', columns: { building_id: 'integer', geometry_id: 'integer' } },
   { table: 'geometries', columns: { geometry_id: 'integer', geometry_geom: 'geometry' } },
@@ -57,6 +57,11 @@ export async function checkDatabase(executor: Executor): Promise<string[]> {
       ...(await checkLoginReachesNoMore(query)),
     ];
   });
+}
+
+/** colouring-core's buildings and footprint layout only: for the check command, with any login. */
+export async function checkLayout(executor: Executor): Promise<string[]> {
+  return executor.read((query) => checkHostLayout(query));
 }
 
 async function checkHostLayout(query: Query): Promise<string[]> {

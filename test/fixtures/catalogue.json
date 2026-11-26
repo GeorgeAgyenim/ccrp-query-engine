@@ -1,0 +1,77 @@
+{
+  "formatVersion": "1.0.0",
+  "generatedBy": "hand-written test fixture: made-up titles over colouring-core columns (test/fixtures/count-in-view.sql)",
+  "categories": [
+    { "key": "land-use", "title": "Land use" },
+    { "key": "construction", "title": "Construction" },
+    { "key": "age", "title": "Age" },
+    { "key": "location", "title": "Location" },
+    { "key": "community", "title": "Community" }
+  ],
+  "fields": [
+    {
+      "key": "current_landuse_group",
+      "category": "land-use",
+      "title": "Land use",
+      "type": "text",
+      "multiValued": true,
+      "allowedValues": ["Residential", "Retail", "Industry", "Agriculture"],
+      "ambiguity": null
+    },
+    {
+      "key": "construction_core_material",
+      "category": "construction",
+      "title": "Main material",
+      "type": "text",
+      "multiValued": false,
+      "allowedValues": ["Wood", "Stone", "Brick", "Steel", "Reinforced Concrete"],
+      "ambiguity": null
+    },
+    {
+      "key": "size_storeys_core",
+      "category": "construction",
+      "title": "Number of storeys",
+      "type": "integer",
+      "multiValued": false,
+      "allowedValues": null,
+      "ambiguity": "The database stores 0 when nothing is entered, so a recorded 0 may not be an observation."
+    },
+    {
+      "key": "typology_classification",
+      "category": "construction",
+      "title": "Typology",
+      "type": "text",
+      "multiValued": false,
+      "allowedValues": ["Low-rise", "Mid-rise", "High-rise"],
+      "ambiguity": null
+    },
+    {
+      "key": "date_year",
+      "category": "age",
+      "title": "Year built",
+      "type": "integer",
+      "multiValued": false,
+      "allowedValues": null,
+      "ambiguity": null
+    },
+    {
+      "key": "size_height_apex",
+      "category": "construction",
+      "title": "Height",
+      "type": "number",
+      "multiValued": false,
+      "allowedValues": null,
+      "ambiguity": null
+    },
+    {
+      "key": "location_street",
+      "category": "location",
+      "title": "Street",
+      "type": "text",
+      "multiValued": false,
+      "allowedValues": null,
+      "ambiguity": null
+    }
+  ],
+  "excludedColumns": []
+}

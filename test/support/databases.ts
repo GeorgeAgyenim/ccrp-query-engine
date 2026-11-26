@@ -16,6 +16,8 @@ export interface TestEnvironment {
   coreTemplate: string;
   /** Every database this run creates starts with this prefix, so teardown can find it. */
   runId: string;
+  /** colouring-core at the pinned commit: its migrations and field definitions. */
+  coreCheckout: string;
 }
 
 export const TEST_VARIABLES = {
@@ -24,6 +26,7 @@ export const TEST_VARIABLES = {
   mainEngineUrl: 'QUERY_ENGINE_TEST_MAIN_ENGINE_URL',
   coreTemplate: 'QUERY_ENGINE_TEST_CORE_TEMPLATE',
   runId: 'QUERY_ENGINE_TEST_RUN_ID',
+  coreCheckout: 'QUERY_ENGINE_TEST_CORE_CHECKOUT',
 } as const satisfies Record<keyof TestEnvironment, string>;
 
 /** Reads the test databases. Throws, so the suite fails instead of skipping, when they are not set. */
@@ -42,6 +45,7 @@ export function testEnvironment(env: NodeJS.ProcessEnv = process.env): TestEnvir
     mainEngineUrl: read(TEST_VARIABLES.mainEngineUrl),
     coreTemplate: read(TEST_VARIABLES.coreTemplate),
     runId: read(TEST_VARIABLES.runId),
+    coreCheckout: read(TEST_VARIABLES.coreCheckout),
   };
 }
 
