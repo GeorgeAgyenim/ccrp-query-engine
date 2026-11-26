@@ -36,8 +36,13 @@ the pass and fail counts.
 2. Builds colouring-core's tables from its own migrations, at the commit pinned in
    `scripts/core-migrations.ts`. The first run downloads colouring-core into `.cache/`.
 3. Applies the engine's migrations.
-4. Loads small, made-up fixtures from `test/fixtures/`.
+4. Loads small, made-up fixtures from `test/fixtures/`. The query tests read them with the fixture field
+   catalogue, `test/fixtures/catalogue.json`; `count-in-view.sql` tabulates its buildings and where each
+   lies, so every expected count can be checked by hand.
 5. Runs every test, then drops the database.
+
+The same download of colouring-core holds its field definitions (`app/src/frontend/config/`), from which
+the catalogue tests generate core's catalogue and run the `check` command against core's schema.
 
 If `QUERY_ENGINE_TEST_ADMIN_URL` is not set, the run fails rather than skipping the tests, so a missing
 database can never look like a pass.
@@ -47,6 +52,10 @@ database can never look like a pass.
 Set `QUERY_ENGINE_TEST_CORE_REPOSITORY` to a local clone of colouring-core that contains the pinned commit,
 and the run uses it instead of GitHub. Once colouring-core has been fetched into `.cache/`, no network is
 needed.
+
+## After changing a schema
+
+Run `npm run types` to regenerate `schemas/query-engine.d.ts`; a test fails while it is out of date.
 
 ## In CI
 
