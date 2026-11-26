@@ -1,0 +1,34 @@
+# Example: run the query engine beside an existing colouring-core database.
+#
+# The database is not part of this file: it is the host's own, already running. Copy this
+# file and put the engine's settings in a .env file next to it (never commit that file):
+#
+#   QUERY_ENGINE_DATABASE_URL=postgres://<engine login>:<password>@host.docker.internal:5432/<database>
+#
+# Run the engine's migrations once per release, with the owner login given only to that
+# command (it stays out of the running service's environment):
+#
+#   QUERY_ENGINE_MIGRATION_DATABASE_URL='postgres://<owner login>:<password>@host.docker.internal:5432/<database>' \
+#     docker compose -f compose.example.yaml run --rm -e QUERY_ENGINE_MIGRATION_DATABASE_URL engine node src/cli.ts migrate up
+#
+# Then start the service:
+#
+#   docker compose -f compose.example.yaml up -d engine
+#
+# host.docker.internal reaches a database on the Docker host. PostgreSQL must listen on an
+# address the container can reach, and pg_hba.conf must allow the engine's login from
+# Docker's network. See docs/host-setup.md.
+
+services:
+  engine:
+    build: .
+    # A released image will replace build: (docs/host-setup.md#releases).
+    environment:
+      QUERY_ENGINE_DATABASE_URL: ${QUERY_ENGINE_DATABASE_URL:?set QUERY_ENGINE_DATABASE_URL in .env}
+      QUERY_ENGINE_STATEMENT_TIMEOUT_MS: ${QUERY_ENGINE_STATEMENT_TIMEOUT_MS:-10000}
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    ports:
+      # Only the host's reverse proxy should reach the engine (route /api/query/*).
+      - 127.0.0.1:3100:3100
+    restart: unless-stopped
