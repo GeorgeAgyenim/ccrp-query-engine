@@ -26,8 +26,9 @@ container: Docker with Compose. Either way, network access from the engine to th
 
 ## Settings
 
-The service reads its settings from environment variables. Values are never committed to any repository,
-logged or printed. Put them in the service's environment, or in a file you keep out of version control and
+The service reads its settings from environment variables. Keep their values out of every repository; the
+engine never logs or prints the database URLs, which hold credentials. Put them in the service's
+environment, or in a file you keep out of version control and
 load with Node's own `--env-file` (for example `node --env-file=/etc/query-engine.env src/main.ts`) or
 Compose's `.env`.
 
@@ -139,25 +140,31 @@ every problem to standard error, starting `The query engine cannot start:`, and 
 |---|---|---|
 | `QUERY_ENGINE_DATABASE_URL is not set` | No database setting | Set it ([Settings](#settings)) |
 | `... must be a whole number of milliseconds` | A malformed timeout | Use a number such as `10000`, no unit |
-| `could not reach the database server` | Wrong host or port, database down, or firewall | Check the URL and that PostgreSQL listens where the engine can reach it |
+| `could not reach the database server` | Wrong host or port, database down, or firewall. `(no answer)` means nothing replied within the engine's 5 s connect limit | Check the URL and that PostgreSQL listens where the engine can reach it |
 | `the database refused the login` | Wrong user name or password, or `pg_hba.conf` | Check the login and `pg_hba.conf` |
+| `the database named in the URL does not exist` | A typo in the database name | Check the URL's path |
 | `The database has no table public.geometries` (or `buildings`) | Not a colouring-core database, or the wrong database | Point the URL at the host's database |
 | `Table public.geometries has no column geometry_geom` | A layout that differs from colouring-core's | The engine needs colouring-core's `buildings` and `geometries` layout |
 | `... has SRID 4326; the engine needs 3857` | Footprints stored in another projection | colouring-core stores footprints in EPSG:3857 |
 | `The engine's migrations have not been run` | New database | [Run the migrations](#run-the-engines-migrations) |
 | `This database is missing engine migration(s) ...` | The engine was upgraded | Run the migrations |
 | `... that this engine version does not ship` | An older engine against a newer database | Run the engine version that migrated it |
-| `The engine's login cannot read public.buildings` | Login not granted the role | `GRANT query_engine_reader TO <login>;` |
+| `The engine's login cannot read public.buildings` (or `query_engine.migrations`) | Login not granted the role | `GRANT query_engine_reader TO <login>;` |
 | `The engine's login is a superuser` | The service was given an administrator's login | Give it its own login ([above](#create-the-engines-login)) |
-| `The engine's login can read public.users` (or any other table) | The login has more than the role | Revoke the extra grant, or use the engine's own login |
-| `The engine's login can change public.buildings` | The login can write | Revoke the write grant, or use the engine's own login |
+| `The engine's login has the CREATEDB attribute` (or `CREATEROLE`, `REPLICATION`, `BYPASSRLS`) | The login can administer the server or bypass table privileges | `ALTER ROLE <login> NOCREATEDB;` (and so on), or use the engine's own login |
+| `The engine's login can read public.users` (or any other table, even one column of it) | The login has more than the role | Revoke the extra grant, or use the engine's own login |
+| `The engine's login can change public.buildings` | The login can write, even to one column | Revoke the write grant, or use the engine's own login |
+| `The engine's login can use sequence ...` | A grant on a sequence | Revoke it |
+| `The engine's login can create objects in schema public` | A `CREATE` grant on a schema, often to `PUBLIC` on old databases | `REVOKE CREATE ON SCHEMA public FROM PUBLIC;` (PostgreSQL 15 and later do this by default) |
+| `the start-up check could not finish` | An unexpected database error, named by its code | Look the code up in PostgreSQL's error codes appendix |
 
 The database's own error messages are not printed, because they can name the login.
 
 ## Statement timeout
 
 Every engine query runs inside a read-only transaction with `statement_timeout` set in that transaction, so
-the timeout holds whatever the login's or database's own defaults are. A statement that runs longer is
+the timeout holds whatever the login's or database's own defaults are. Each engine connection also opens
+with read-only transactions and the same timeout as its session defaults. A statement that runs longer is
 cancelled by PostgreSQL and the request fails; nothing is left running.
 
 The default is **10000 ms (10 s)**, five times the engine's 2 s answer target, so a slow but legitimate
@@ -194,10 +201,13 @@ after migrating up again, grant it again.
 
 ## Logs
 
-JSON lines on standard output, one per request: the route pattern (for example `/health`), the status and the
-duration. Never the query string, body, headers or client address, which can carry a person's location or
-identity. Errors are logged by name, database error code and stack frames, never by the database's message,
-which can repeat a value from the query.
+JSON lines on standard output (pino's format, through Fastify). Each line has pino's level, time, process id
+and the server's host name. A request adds one line with a per-process request counter (`reqId`), the
+method, the route pattern (for example `/health`), the status and the duration. Never the query string,
+body, headers or client address, which can carry a person's location or identity. Errors are logged by
+name, database error code and stack frames, never by the database's message, which can repeat a value from
+the query ([ADR-0008](decisions/0008-log-errors-without-personal-data.md)). At start the service logs the
+address it listens on; it never logs the database URL.
 
 ## Releases
 

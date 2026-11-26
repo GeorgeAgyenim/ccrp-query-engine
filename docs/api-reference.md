@@ -14,8 +14,8 @@ Status: pre-release. Only the health endpoint exists.
 - Errors have the body `{"error": "<plain-English message>"}`. A 500 says only `internal error`; the details
   go to the engine's log, without any value a request sent.
 - The engine keeps no session and no state between requests.
-- Request logs record the route pattern, status and duration only, never the query string, body, headers or
-  client address.
+- A request's log line records its method, route pattern, status and duration, never the query string, body,
+  headers or client address.
 
 ## `GET /health`
 

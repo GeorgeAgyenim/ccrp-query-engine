@@ -16,8 +16,11 @@ This repository is **public**. Every commit, fixture, doc, issue and log line is
 - **Least privilege**: the service reads through its engine login and the `executor` only
   (`src/executor.ts`). A change that needs more database access changes migration grants and
   [ADR-0007](docs/decisions/0007-engine-schema-role-and-migrations.md) first.
-- **Safe logs**: log errors with `describeError` (`src/safe-log.ts`): name, code, stack frames. Request logs
-  carry route, status and duration. What a person sent, their address and database messages stay out.
+- **Safe logs** ([ADR-0008](docs/decisions/0008-log-errors-without-personal-data.md)): log errors with
+  `describeError` (`src/safe-log.ts`): name, code, stack frames. Request logs carry method, route pattern,
+  status and duration. What a person sent, their address, the database URLs and database messages stay
+  out. One exception: the migrate command shows the operator the database's message for a failed
+  migration statement, which describes the engine's own DDL.
 - **Failing tests get fixed**: a red test is a finding; fix the code, or the test if it is wrong, and say which.
 
 ## Workflow
@@ -38,8 +41,8 @@ This repository is **public**. Every commit, fixture, doc, issue and log line is
   do the job, and record it in the inventory.
 - Engine migrations: `migrations/NNN.lower-case-words.up.sql` with a matching `.down.sql`. A migration that
   creates a table in `query_engine` grants `SELECT` on it to `query_engine_reader` (a test checks).
-- Settings are `QUERY_ENGINE_*` environment variables, read in `src/settings.ts` and documented in
-  `docs/host-setup.md#settings`.
+- Settings are `QUERY_ENGINE_*` environment variables, read only in `src/settings.ts` (messages use its
+  name constants) and documented in `docs/host-setup.md#settings`.
 
 ## Testing
 

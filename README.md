@@ -66,6 +66,10 @@ Test database ready in 2.6 s: colouring-core cd5fc563 (59 migrations), engine mi
 Without `QUERY_ENGINE_TEST_ADMIN_URL` the command fails; it never skips the suite. CI runs the same command
 against a PostGIS service container (`.github/workflows/ci.yml`).
 
+To work offline, point `QUERY_ENGINE_TEST_CORE_REPOSITORY` at a local clone of colouring-core that contains
+the pinned commit (`scripts/core-migrations.ts`); the command fetches from it instead of GitHub. Once fetched,
+the migrations stay in `.cache/` and no network is needed.
+
 ## Documentation
 
 - [Host setup guide](docs/host-setup.md): running the engine for a CCRP instance
