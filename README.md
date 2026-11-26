@@ -1,11 +1,8 @@
 # CCRP Query Engine
 
-A read-only query service for [Colouring Cities](https://github.com/colouring-cities) platforms. It selects
-and counts buildings in a map area by their attributes. It runs beside a colouring-core platform and reads that
-platform's PostGIS database; the platform forwards `/api/query/*` to it.
-
-**Status:** early development. The service starts and checks its database access; query endpoints are not
-available yet. See the [changelog](CHANGELOG.md).
+A spatial query engine and assistant for [Colouring Cities](https://github.com/colouring-cities) platforms.
+It runs beside a colouring-core platform and reads that platform's PostGIS database; the platform forwards
+`/api/query/*` to it.
 
 ## Requirements
 
