@@ -1,12 +1,10 @@
 # ADR-0007: The engine's schema, group role and migrations, and a start-up check that fails closed
 
-- Status: Proposed, awaiting the product owner's acceptance (one-way door: the schema, role and setting
-  names are what hosts' databases, grants and deployments refer to). Implemented in query-engine ticket 01;
-  nothing is released, so the names can still change at no cost to any host.
+- Status: Accepted 2026-11-26 (one-way door: the schema, role and setting names are what hosts' databases,
+  grants and deployments refer to)
 - Date: 2026-11-26
 - Origin: new in the engine repository (query-engine ticket 01); implements ADR-0001 and ADR-0006
-- Deciders: proposed by Claude (Anthropic) as engineer, within the product owner's accepted ADR-0001 and
-  ADR-0006
+- Deciders: proposed by Claude (Anthropic) as engineer; accepted by the product owner 2026-11-26
 - Related: ADR-0001, ADR-0004, ADR-0006, ADR-0008
 
 ## Context
