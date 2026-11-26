@@ -1,9 +1,9 @@
 # ADR-0012: To count buildings in an area, first list the building outlines in the area, then look up their buildings
 
-- Status: Proposed
+- Status: Accepted 2026-11-26
 - Date: 2026-11-26
 - Origin: new in the engine repository (query-engine ticket 19)
-- Deciders: proposed by Claude (Anthropic) as engineer; to be accepted by the product owner
+- Deciders: proposed by Claude (Anthropic) as engineer; accepted by the product owner 2026-11-26
 - Related: ADR-0005 (how a building is placed in an area, unchanged; this record revises its note on growth to
   ten times the data), ADR-0001 (questions are answered by the platform's own database), ADR-0007 (the engine
   adds nothing to the platform's own tables)
