@@ -15,15 +15,17 @@ async function readablePrivileges(adminUrl: string) {
   return withClient(adminUrl, async (client) => {
     const { rows: version } = await client.query<{ server_version_num: string }>('SHOW server_version_num');
     // MAINTAIN (VACUUM, ANALYZE, REINDEX and the like) exists from PostgreSQL 17.
-    const writes = `INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER${Number(version[0]?.server_version_num) >= 170000 ? ', MAINTAIN' : ''}`;
+    const tableWrites = `DELETE, TRUNCATE, TRIGGER${Number(version[0]?.server_version_num) >= 170000 ? ', MAINTAIN' : ''}`;
+    // has_any_column_privilege also sees grants on single columns, which has_table_privilege misses.
     const relations = await client.query<{ relation: string; can_select: boolean; can_write: boolean }>(
       `SELECT format('%s.%s', n.nspname, c.relname) AS relation,
-              has_table_privilege('query_engine_reader', c.oid, 'SELECT') AS can_select,
-              has_table_privilege('query_engine_reader', c.oid, $1) AS can_write
+              has_any_column_privilege('query_engine_reader', c.oid, 'SELECT') AS can_select,
+              has_any_column_privilege('query_engine_reader', c.oid, 'INSERT, UPDATE, REFERENCES')
+                OR has_table_privilege('query_engine_reader', c.oid, $1) AS can_write
          FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
         WHERE c.relkind IN ('r', 'p', 'v', 'm', 'f')
           AND n.nspname NOT IN ('pg_catalog', 'information_schema') AND n.nspname NOT LIKE 'pg\\_toast%'`,
-      [writes],
+      [tableWrites],
     );
     const sequences = await client.query<{ relation: string }>(
       `SELECT format('%s.%s', n.nspname, c.relname) AS relation
@@ -140,16 +142,18 @@ describe('migrate command', () => {
         const { rows } = await client.query(`SELECT to_regnamespace('query_engine') AS schema`);
         assert.equal(rows[0].schema, null, 'down removes the engine schema');
       });
-      // The role is cluster-wide: down keeps it only while another database (here, the main
-      // test database) still grants it something.
+      // The role is cluster-wide: down keeps it while another database still grants it
+      // something, as the main test database always does during the suite.
       await withClient(copy.adminUrl, async (client) => {
         const { rows } = await client.query(
-          `SELECT r.oid IS NULL AS dropped,
+          `SELECT r.oid IS NOT NULL AS kept,
                   EXISTS (SELECT FROM pg_shdepend d JOIN pg_database db ON db.oid = d.dbid
-                           WHERE d.refobjid = r.oid AND db.datname <> current_database()) AS used_elsewhere
+                           WHERE d.refobjid = r.oid AND db.datname <> current_database()) AS used_elsewhere,
+                  EXISTS (SELECT FROM pg_shdepend d JOIN pg_database db ON db.oid = d.dbid
+                           WHERE d.refobjid = r.oid AND db.datname = current_database()) AS used_here
              FROM (SELECT) AS one LEFT JOIN pg_roles r ON r.rolname = 'query_engine_reader'`,
         );
-        assert.ok(rows[0].dropped || rows[0].used_elsewhere, 'role dropped, or kept because another database uses it');
+        assert.deepEqual(rows[0], { kept: true, used_elsewhere: true, used_here: false });
       });
 
       const reapplied = await migrate('up', copy.adminUrl);

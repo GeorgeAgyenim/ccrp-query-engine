@@ -1,6 +1,7 @@
 // The service as an operator runs it: node src/main.ts with settings in its environment.
 
 import assert from 'node:assert/strict';
+import { randomBytes } from 'node:crypto';
 import { describe, test } from 'node:test';
 import { migrateUp } from '../src/migrations.ts';
 import { copyOfCoreDatabase, testEnvironment, withClient, type DatabaseCopy } from './support/databases.ts';
@@ -136,24 +137,80 @@ describe('start-up check', () => {
     await refusal({ QUERY_ENGINE_DATABASE_URL: env.mainAdminUrl }, /The engine's login is a superuser/);
   });
 
-  test("refuses to start when the engine's login can read a contributor table", async () => {
-    const copy = await migratedCopy();
+  // Each grant widens (or, for the last, narrows) the engine role in a copy of the database only.
+  const wrongGrants: Array<{ name: string; sql: string; expected: RegExp }> = [
+    {
+      name: 'can read a contributor table',
+      sql: 'GRANT SELECT ON users TO query_engine_reader',
+      expected: /The engine's login can read public\.users/,
+    },
+    {
+      name: 'can read one column of a contributor table',
+      sql: 'GRANT SELECT (email) ON users TO query_engine_reader',
+      expected: /The engine's login can read public\.users/,
+    },
+    {
+      name: 'can change buildings',
+      sql: 'GRANT UPDATE ON buildings TO query_engine_reader',
+      expected: /The engine's login can change public\.buildings/,
+    },
+    {
+      name: 'can change one column of buildings',
+      sql: 'GRANT UPDATE (geometry_id) ON buildings TO query_engine_reader',
+      expected: /The engine's login can change public\.buildings/,
+    },
+    {
+      name: 'can use a sequence',
+      sql: 'GRANT USAGE ON SEQUENCE logs_log_id_seq TO query_engine_reader',
+      expected: /The engine's login can use sequence public\.logs_log_id_seq/,
+    },
+    {
+      name: 'can create objects in a schema',
+      sql: 'GRANT CREATE ON SCHEMA public TO query_engine_reader',
+      expected: /The engine's login can create objects in schema public/,
+    },
+    {
+      name: 'cannot read the engine migration record',
+      sql: 'REVOKE SELECT ON query_engine.migrations FROM query_engine_reader',
+      expected: /The engine's login cannot read query_engine\.migrations/,
+    },
+  ];
+  for (const grant of wrongGrants) {
+    test(`refuses to start when the engine's login ${grant.name}`, async () => {
+      const copy = await migratedCopy();
+      try {
+        await withClient(copy.adminUrl, (client) => client.query(grant.sql));
+        await refusal({ QUERY_ENGINE_DATABASE_URL: copy.engineUrl }, grant.expected);
+      } finally {
+        await copy.drop();
+      }
+    });
+  }
+
+  test("refuses to start when the engine's login has a role attribute such as CREATEDB", async () => {
+    const login = `${env.runId}_createdb`;
+    const password = randomBytes(18).toString('base64url');
+    await withClient(env.serverAdminUrl, async (client) => {
+      await client.query(`CREATE ROLE ${client.escapeIdentifier(login)} LOGIN CREATEDB PASSWORD ${client.escapeLiteral(password)}`);
+      await client.query(`GRANT query_engine_reader TO ${client.escapeIdentifier(login)}`);
+    });
     try {
-      await withClient(copy.adminUrl, (client) => client.query('GRANT SELECT ON users TO query_engine_reader'));
-      await refusal({ QUERY_ENGINE_DATABASE_URL: copy.engineUrl }, /The engine's login can read public\.users/);
+      const url = new URL(env.mainEngineUrl);
+      url.username = login;
+      url.password = password;
+      await refusal({ QUERY_ENGINE_DATABASE_URL: url.toString() }, /The engine's login has the CREATEDB attribute/);
     } finally {
-      await copy.drop();
+      await withClient(env.serverAdminUrl, (client) => client.query(`DROP ROLE ${client.escapeIdentifier(login)}`));
     }
   });
 
-  test("refuses to start when the engine's login can change buildings", async () => {
-    const copy = await migratedCopy();
-    try {
-      await withClient(copy.adminUrl, (client) => client.query('GRANT UPDATE ON buildings TO query_engine_reader'));
-      await refusal({ QUERY_ENGINE_DATABASE_URL: copy.engineUrl }, /The engine's login can change public\.buildings/);
-    } finally {
-      await copy.drop();
-    }
+  test('refuses to start within seconds when the database server never answers', async () => {
+    // 192.0.2.1 is reserved for documentation (RFC 5737): nothing answers there.
+    const silent = new URL(env.mainEngineUrl);
+    silent.hostname = '192.0.2.1';
+    const started = Date.now();
+    await refusal({ QUERY_ENGINE_DATABASE_URL: silent.toString() }, /could not reach the database server/);
+    assert.ok(Date.now() - started < 15_000, 'gave up well before TCP would');
   });
 });
 
