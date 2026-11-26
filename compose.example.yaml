@@ -4,6 +4,10 @@
 # file and put the engine's settings in a .env file next to it (never commit that file):
 #
 #   QUERY_ENGINE_DATABASE_URL=postgres://<engine login>:<password>@host.docker.internal:5432/<database>
+#   CATALOGUE_PATH=/path/to/your/catalogue.json
+#
+# The catalogue file is the one the engine's catalogue command made from your field
+# definitions (docs/host-setup.md#the-field-catalogue); it is mounted read-only.
 #
 # Run the engine's migrations once per release, with the owner login given only to that
 # command (it stays out of the running service's environment):
@@ -26,6 +30,9 @@ services:
     environment:
       QUERY_ENGINE_DATABASE_URL: ${QUERY_ENGINE_DATABASE_URL:?set QUERY_ENGINE_DATABASE_URL in .env}
       QUERY_ENGINE_STATEMENT_TIMEOUT_MS: ${QUERY_ENGINE_STATEMENT_TIMEOUT_MS:-10000}
+      QUERY_ENGINE_CATALOGUE_FILE: /config/catalogue.json
+    volumes:
+      - ${CATALOGUE_PATH:?set CATALOGUE_PATH in .env}:/config/catalogue.json:ro
     extra_hosts:
       - host.docker.internal:host-gateway
     ports:

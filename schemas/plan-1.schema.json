@@ -1,0 +1,203 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ccrp-query-engine:schema:plan:1.0.0",
+  "title": "Plan",
+  "description": "A question about buildings in plan format 1.0.0: one area, ordered steps and one or more outputs (docs/decisions/0010-plan-format-1-json-shape.md).",
+  "type": "object",
+  "required": ["version", "area", "steps", "outputs"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "description": "The plan format's semantic version.",
+      "enum": ["1.0.0"]
+    },
+    "area": { "$ref": "#/$defs/Area" },
+    "steps": {
+      "description": "Applied in order. Several filter steps all apply. No steps means every building in the area.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/Step" }
+    },
+    "outputs": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/Output" }
+    }
+  },
+  "$defs": {
+    "Area": {
+      "description": "Where the buildings are. A building is in the area when its point on surface is inside it or on its edge.",
+      "oneOf": [{ "$ref": "#/$defs/ViewportArea" }]
+    },
+    "ViewportArea": {
+      "description": "The part of the map in view.",
+      "type": "object",
+      "required": ["type", "bbox"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "viewport" },
+        "bbox": {
+          "description": "[west, south, east, north] in WGS 84 degrees; west < east and south < north.",
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "prefixItems": [
+            { "$ref": "#/$defs/Longitude" },
+            { "$ref": "#/$defs/Latitude" },
+            { "$ref": "#/$defs/Longitude" },
+            { "$ref": "#/$defs/Latitude" }
+          ],
+          "items": false
+        }
+      }
+    },
+    "Longitude": { "type": "number", "minimum": -180, "maximum": 180 },
+    "Latitude": {
+      "description": "Within Web Mercator's limits, where colouring-core's footprints are stored.",
+      "type": "number",
+      "minimum": -85.0511287798,
+      "maximum": 85.0511287798
+    },
+    "Step": { "oneOf": [{ "$ref": "#/$defs/FilterStep" }] },
+    "FilterStep": {
+      "description": "Keeps the buildings for which the condition is TRUE.",
+      "type": "object",
+      "required": ["type", "filter"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "filter" },
+        "filter": { "$ref": "#/$defs/Condition" }
+      }
+    },
+    "Condition": {
+      "description": "A condition in the engine's subset of CQL2-JSON (OGC 21-065r2).",
+      "oneOf": [
+        { "$ref": "#/$defs/AndOrCondition" },
+        { "$ref": "#/$defs/NotCondition" },
+        { "$ref": "#/$defs/ComparisonCondition" },
+        { "$ref": "#/$defs/BetweenCondition" },
+        { "$ref": "#/$defs/InCondition" },
+        { "$ref": "#/$defs/ArrayCondition" },
+        { "$ref": "#/$defs/RecordedCondition" }
+      ]
+    },
+    "AndOrCondition": {
+      "type": "object",
+      "required": ["op", "args"],
+      "additionalProperties": false,
+      "properties": {
+        "op": { "enum": ["and", "or"] },
+        "args": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/Condition" } }
+      }
+    },
+    "NotCondition": {
+      "type": "object",
+      "required": ["op", "args"],
+      "additionalProperties": false,
+      "properties": {
+        "op": { "const": "not" },
+        "args": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "prefixItems": [{ "$ref": "#/$defs/Condition" }],
+          "items": false
+        }
+      }
+    },
+    "ComparisonCondition": {
+      "type": "object",
+      "required": ["op", "args"],
+      "additionalProperties": false,
+      "properties": {
+        "op": { "enum": ["=", "<>", "<", "<=", ">", ">="] },
+        "args": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "prefixItems": [{ "$ref": "#/$defs/PropertyRef" }, { "$ref": "#/$defs/Value" }],
+          "items": false
+        }
+      }
+    },
+    "BetweenCondition": {
+      "description": "Inclusive at both ends.",
+      "type": "object",
+      "required": ["op", "args"],
+      "additionalProperties": false,
+      "properties": {
+        "op": { "const": "between" },
+        "args": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "prefixItems": [{ "$ref": "#/$defs/PropertyRef" }, { "type": "number" }, { "type": "number" }],
+          "items": false
+        }
+      }
+    },
+    "InCondition": {
+      "type": "object",
+      "required": ["op", "args"],
+      "additionalProperties": false,
+      "properties": {
+        "op": { "const": "in" },
+        "args": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "prefixItems": [{ "$ref": "#/$defs/PropertyRef" }, { "$ref": "#/$defs/ValueList" }],
+          "items": false
+        }
+      }
+    },
+    "ArrayCondition": {
+      "description": "For multi-valued fields, comparing the field's values with a list as sets (CQL2's array functions).",
+      "type": "object",
+      "required": ["op", "args"],
+      "additionalProperties": false,
+      "properties": {
+        "op": { "enum": ["a_equals", "a_contains", "a_containedBy", "a_overlaps"] },
+        "args": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "prefixItems": [{ "$ref": "#/$defs/PropertyRef" }, { "$ref": "#/$defs/ValueList" }],
+          "items": false
+        }
+      }
+    },
+    "RecordedCondition": {
+      "description": "Whether the field has a value recorded (recorded) or not (blank), by the catalogue's missing-value rules.",
+      "type": "object",
+      "required": ["op", "args"],
+      "additionalProperties": false,
+      "properties": {
+        "op": { "enum": ["recorded", "blank"] },
+        "args": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "prefixItems": [{ "$ref": "#/$defs/PropertyRef" }],
+          "items": false
+        }
+      }
+    },
+    "PropertyRef": {
+      "description": "A field, by its catalogue key.",
+      "type": "object",
+      "required": ["property"],
+      "additionalProperties": false,
+      "properties": { "property": { "type": "string", "minLength": 1 } }
+    },
+    "Value": { "type": ["string", "number", "boolean"] },
+    "ValueList": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/Value" } },
+    "Output": { "oneOf": [{ "$ref": "#/$defs/NumberOutput" }] },
+    "NumberOutput": {
+      "description": "The headline count with its denominators, share and sentence.",
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": { "type": { "const": "number" } }
+    }
+  }
+}

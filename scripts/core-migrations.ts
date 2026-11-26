@@ -1,5 +1,6 @@
-// colouring-core's database migrations at a pinned commit: fetched with git into
-// .cache/ and applied the way core's migrations/README.md applies them.
+// colouring-core at a pinned commit, fetched with git into .cache/: its database migrations,
+// applied the way core's migrations/README.md applies them, and its field definitions, from
+// which the tests generate core's field catalogue.
 //
 // When you change CORE_COMMIT, update docs/tools-inventory.md in the same commit.
 
@@ -27,32 +28,38 @@ const EXPECTED_ERRORS: ReadonlyArray<{ file: string; sqlstate: string; why: stri
   },
 ];
 
-/** Fetches core's migrations at `commit` (once; later runs reuse the cache). Returns their directory. */
-export async function fetchCoreMigrations(options: {
-  repository: string;
-  commit: string;
-  cacheRoot: string;
-}): Promise<string> {
+// The parts of core the tests read: the migrations, and the field definitions with the files
+// they import (the categories module and the instance configuration JSON).
+export const CORE_PATHS = ['migrations', 'app/src/frontend/config', 'app/src/cc-config.json'];
+
+/** Where the field definitions are in a colouring-core checkout. */
+export const CORE_DEFINITIONS = 'app/src/frontend/config/data-fields-config.ts';
+
+/**
+ * Fetches core's CORE_PATHS at `commit` (once; later runs reuse the cache). Returns the
+ * checkout's directory; the migrations are in its migrations/.
+ */
+export async function fetchCore(options: { repository: string; commit: string; cacheRoot: string }): Promise<string> {
   const checkout = join(options.cacheRoot, 'colouring-core', options.commit);
-  const migrations = join(checkout, 'migrations');
-  if (await checkedOutAt(checkout, options.commit)) return migrations;
+  if (await checkedOutAt(checkout, options.commit)) return checkout;
 
   await rm(checkout, { recursive: true, force: true });
   await mkdir(checkout, { recursive: true });
   const git = (...args: string[]) => run('git', ['-C', checkout, ...args]);
   await git('init', '--quiet');
-  await git('sparse-checkout', 'set', 'migrations');
+  // --no-cone: the paths include a file as well as directories.
+  await git('sparse-checkout', 'set', '--no-cone', ...CORE_PATHS.map((path) => `/${path}`));
   await git('fetch', '--quiet', '--depth', '1', '--filter=blob:none', options.repository, options.commit);
   await git('-c', 'advice.detachedHead=false', 'checkout', '--quiet', 'FETCH_HEAD');
   if (!(await checkedOutAt(checkout, options.commit))) {
     throw new Error(`Fetched colouring-core but HEAD is not ${options.commit}`);
   }
-  return migrations;
+  return checkout;
 }
 
 async function checkedOutAt(checkout: string, commit: string): Promise<boolean> {
   try {
-    await access(join(checkout, 'migrations'));
+    for (const path of [...CORE_PATHS, CORE_DEFINITIONS]) await access(join(checkout, path));
     const { stdout } = await run('git', ['-C', checkout, 'rev-parse', 'HEAD']);
     return stdout.trim() === commit;
   } catch {

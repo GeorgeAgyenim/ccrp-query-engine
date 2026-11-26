@@ -37,14 +37,24 @@ It runs beside a colouring-core platform and reads that platform's PostGIS datab
 
    Then allow it to connect in `pg_hba.conf`.
 
-4. **Start the engine** and check it:
+4. **Generate your field catalogue** from your platform's field definitions
+   ([host setup guide](docs/host-setup.md#the-field-catalogue)):
 
    ```sh
-   QUERY_ENGINE_DATABASE_URL='postgres://query_engine_login:<password>@<host>:5432/<database>' npm start
+   QUERY_ENGINE_DATABASE_URL='postgres://query_engine_login:<password>@<host>:5432/<database>' \
+     node src/cli.ts catalogue --definitions <platform>/app/src/frontend/config/data-fields-config.ts \
+     --output <platform>/query-engine/catalogue.json
+   ```
+
+5. **Start the engine** and check it:
+
+   ```sh
+   QUERY_ENGINE_DATABASE_URL='postgres://query_engine_login:<password>@<host>:5432/<database>' \
+   QUERY_ENGINE_CATALOGUE_FILE=<platform>/query-engine/catalogue.json npm start
    curl http://127.0.0.1:3100/health    # {"status":"ok"}
    ```
 
-5. **Forward `/api/query/` from your platform** to the engine, for example with nginx:
+6. **Forward `/api/query/` from your platform** to the engine, for example with nginx:
 
    ```nginx
    location /api/query/ {
@@ -52,10 +62,11 @@ It runs beside a colouring-core platform and reads that platform's PostGIS datab
    }
    ```
 
-6. **Add the screens** to your frontend by following the [UI integration guide](docs/ui-integration-guide.md).
+7. **Add the screens** to your frontend by following the [UI integration guide](docs/ui-integration-guide.md).
 
 To run it in Docker instead, use [`compose.example.yaml`](compose.example.yaml). The
-[host setup guide](docs/host-setup.md) covers every setting, `pg_hba.conf`, upgrades and start-up errors.
+[host setup guide](docs/host-setup.md) covers every setting, `pg_hba.conf`, the `check` command for your CI,
+upgrades and start-up errors.
 
 ## Development
 

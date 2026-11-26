@@ -7,6 +7,8 @@ export interface Settings {
   databaseUrl: string;
   /** Statement timeout set inside every engine transaction, in milliseconds. */
   statementTimeoutMs: number;
+  /** Path of the host's field catalogue file (catalogue format 1, made by the catalogue command). */
+  catalogueFile: string;
   /** Interface the HTTP server listens on. */
   host: string;
   /** Port the HTTP server listens on. */
@@ -16,6 +18,7 @@ export interface Settings {
 export const SETTING_NAMES = {
   databaseUrl: 'QUERY_ENGINE_DATABASE_URL',
   statementTimeoutMs: 'QUERY_ENGINE_STATEMENT_TIMEOUT_MS',
+  catalogueFile: 'QUERY_ENGINE_CATALOGUE_FILE',
   host: 'QUERY_ENGINE_HOST',
   port: 'QUERY_ENGINE_PORT',
 } as const satisfies Record<keyof Settings, string>;
@@ -50,8 +53,55 @@ const MAX_TIMEOUT_MS = 2_147_483_647;
 
 export type SettingsResult = { ok: true; settings: Settings } | { ok: false; problems: string[] };
 
-/** Reads and checks every setting; reports every problem at once, never a value. */
+/** Reads and checks every setting the service needs; reports every problem at once, never a value. */
 export function readSettings(env: Record<string, string | undefined>): SettingsResult {
+  const database = readDatabaseSettings(env);
+  const problems = database.ok ? [] : [...database.problems];
+
+  const catalogueFile = readCatalogueFile(env, problems);
+
+  const port = wholeNumber(env[SETTING_NAMES.port], DEFAULT_PORT);
+  if (port === undefined || port > 65_535) {
+    problems.push(`${SETTING_NAMES.port} must be a port number from 0 to 65535.`);
+  }
+
+  const host = env[SETTING_NAMES.host] || DEFAULT_HOST;
+
+  if (!database.ok || catalogueFile === undefined || problems.length > 0 || port === undefined) {
+    return { ok: false, problems };
+  }
+  return { ok: true, settings: { ...database.settings, catalogueFile, host, port } };
+}
+
+export type DatabaseSettingsResult =
+  | { ok: true; settings: Pick<Settings, 'databaseUrl' | 'statementTimeoutMs'> }
+  | { ok: false; problems: string[] };
+
+export type CheckSettingsResult =
+  | { ok: true; settings: Pick<Settings, 'databaseUrl' | 'statementTimeoutMs' | 'catalogueFile'> }
+  | { ok: false; problems: string[] };
+
+/** The check command's settings: the database and the catalogue file. */
+export function readCheckSettings(env: Record<string, string | undefined>): CheckSettingsResult {
+  const database = readDatabaseSettings(env);
+  const problems = database.ok ? [] : [...database.problems];
+  const catalogueFile = readCatalogueFile(env, problems);
+  if (!database.ok || catalogueFile === undefined) return { ok: false, problems };
+  return { ok: true, settings: { ...database.settings, catalogueFile } };
+}
+
+function readCatalogueFile(env: Record<string, string | undefined>, problems: string[]): string | undefined {
+  const catalogueFile = env[SETTING_NAMES.catalogueFile] ?? '';
+  if (catalogueFile !== '') return catalogueFile;
+  problems.push(
+    `${SETTING_NAMES.catalogueFile} is not set. Set it to the path of the field catalogue file made by the ` +
+      "engine's catalogue command (see docs/host-setup.md).",
+  );
+  return undefined;
+}
+
+/** The database settings alone: for the catalogue command, which needs no catalogue file. */
+export function readDatabaseSettings(env: Record<string, string | undefined>): DatabaseSettingsResult {
   const problems: string[] = [];
 
   const databaseUrl = env[SETTING_NAMES.databaseUrl] ?? '';
@@ -70,17 +120,8 @@ export function readSettings(env: Record<string, string | undefined>): SettingsR
     );
   }
 
-  const port = wholeNumber(env[SETTING_NAMES.port], DEFAULT_PORT);
-  if (port === undefined || port > 65_535) {
-    problems.push(`${SETTING_NAMES.port} must be a port number from 0 to 65535.`);
-  }
-
-  const host = env[SETTING_NAMES.host] || DEFAULT_HOST;
-
-  if (problems.length > 0 || statementTimeoutMs === undefined || port === undefined) {
-    return { ok: false, problems };
-  }
-  return { ok: true, settings: { databaseUrl, statementTimeoutMs, host, port } };
+  if (problems.length > 0 || statementTimeoutMs === undefined) return { ok: false, problems };
+  return { ok: true, settings: { databaseUrl, statementTimeoutMs } };
 }
 
 function isPostgresUrl(value: string): boolean {

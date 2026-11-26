@@ -2,7 +2,11 @@
 
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
+import { join } from 'node:path';
 import { baseEnvironment, ROOT } from './processes.ts';
+
+/** The hand-written fixture catalogue, over colouring-core columns (test/fixtures/count-in-view.sql). */
+export const FIXTURE_CATALOGUE = join(ROOT, 'test/fixtures/catalogue.json');
 
 export interface RunningService {
   baseUrl: string;
@@ -22,12 +26,15 @@ export async function freePort(): Promise<number> {
   });
 }
 
-/** Starts the service and waits until it answers. Rejects with its stderr if it exits first. */
+/**
+ * Starts the service and waits until it answers. Rejects with its stderr if it exits first.
+ * It reads the fixture catalogue unless `env` names another.
+ */
 export async function startService(env: Record<string, string>): Promise<RunningService> {
   const port = await freePort();
   const child = spawn(process.execPath, ['src/main.ts'], {
     cwd: ROOT,
-    env: baseEnvironment({ QUERY_ENGINE_PORT: String(port), ...env }),
+    env: baseEnvironment({ QUERY_ENGINE_PORT: String(port), QUERY_ENGINE_CATALOGUE_FILE: FIXTURE_CATALOGUE, ...env }),
   });
   let stdout = '';
   let stderr = '';

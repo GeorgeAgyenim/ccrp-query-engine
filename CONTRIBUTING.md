@@ -11,8 +11,8 @@ This repository is **public**. Every commit, fixture, doc, issue and log line is
   personal data, anywhere. Fixtures are hand-made synthetic data (see `test/fixtures/`: made-up squares at
   0°N 0°E, `example.invalid` addresses).
 - **Instance-neutral code**: the code names no instance. Instance facts arrive as configuration and data.
-- **Parameters only**: SQL takes values as `$1` parameters. Identifiers come from the code or, later, the
-  field catalogue and layer registry; DDL that cannot take parameters quotes with `escapeIdentifier`.
+- **Parameters only**: SQL takes values as `$1` parameters. Identifiers come from the code, the field
+  catalogue or, later, the layer registry; DDL that cannot take parameters quotes with `escapeIdentifier`.
 - **Least privilege**: the service reads through its engine login and the executor only
   (`src/executor.ts`). A change that needs more database access changes the migration grants and
   [ADR-0007](docs/decisions/0007-engine-schema-role-and-migrations.md) first.
@@ -44,10 +44,15 @@ This repository is **public**. Every commit, fixture, doc, issue and log line is
 How to run them: the [testing guide](docs/testing.md).
 
 - Tests sit at the seams a caller can observe: the service over HTTP and as a process
-  (`test/service.test.ts`), the executor as the engine login (`test/executor.test.ts`), and the migrate
-  command and the role's privileges (`test/engine-role.test.ts`).
+  (`test/service.test.ts`, and the query API in `test/query-api.test.ts`), the executor as the engine login
+  (`test/executor.test.ts`), the migrate command and the role's privileges (`test/engine-role.test.ts`), the
+  `catalogue` and `check` commands (`test/commands.test.ts`), and the published types file
+  (`test/types-file.test.ts`).
 - All run against a real PostGIS database. Expected values are hand-written literals.
-- New fixtures go in `test/fixtures/<name>.sql` and in the `FIXTURES` list in `scripts/test.ts`.
+- New fixtures go in `test/fixtures/<name>.sql` and in the `FIXTURES` list in `scripts/test.ts`. A fixture
+  says, in its header, which buildings it holds and why, so expected values can be checked by hand.
+- The JSON Schemas in `schemas/` are the published contract. Change one only with its decision record, then
+  run `npm run types`.
 - The test database is built from colouring-core's migrations at the commit pinned in
   `scripts/core-migrations.ts`. Changing that commit means updating the tools inventory too.
 

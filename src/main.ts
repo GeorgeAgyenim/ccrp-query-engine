@@ -1,28 +1,16 @@
-// The service: node src/main.ts (npm start). Reads its settings, checks the database, then
-// serves the HTTP API. If anything is wrong it prints why to stderr and exits with code 1.
+// The service: node src/main.ts (npm start). Reads its settings, checks the database and the
+// field catalogue, then serves the HTTP API. If anything is wrong it prints why to stderr and
+// exits with code 1.
 
-import { connectionProblem } from './connection-problems.ts';
 import { createExecutor } from './executor.ts';
-import { checkDatabase } from './layout-check.ts';
 import { describeError } from './safe-log.ts';
 import { buildServer } from './server.ts';
-import { readSettings, SETTING_NAMES } from './settings.ts';
+import { readSettings } from './settings.ts';
+import { runStartupCheck } from './startup-check.ts';
 
 function refuseToStart(problems: string[]): void {
   console.error(['The query engine cannot start:', ...problems.map((problem) => `  - ${problem}`)].join('\n'));
   process.exitCode = 1;
-}
-
-// A failure of the check itself, described the way logs describe errors: by name and code,
-// with the message only for the engine's own errors.
-function checkFailure(error: unknown): string {
-  const connection = connectionProblem(error, SETTING_NAMES.databaseUrl);
-  if (connection !== undefined) return connection;
-  const { name, code, message } = describeError(error);
-  return (
-    `the start-up check could not finish: ${name}${code === undefined ? '' : ` (${code})`}` +
-    `${message === undefined ? '' : `: ${message}`}. See docs/host-setup.md.`
-  );
 }
 
 const result = readSettings(process.env);
@@ -35,18 +23,12 @@ if (!result.ok) {
     statementTimeoutMs: settings.statementTimeoutMs,
   });
 
-  let problems: string[];
-  try {
-    problems = await checkDatabase(executor);
-  } catch (error) {
-    problems = [checkFailure(error)];
-  }
-
-  if (problems.length > 0) {
+  const { problems, catalogue } = await runStartupCheck(executor, settings.catalogueFile, 'service');
+  if (problems.length > 0 || catalogue === undefined) {
     await executor.close();
     refuseToStart(problems);
   } else {
-    const app = buildServer({ executor });
+    const app = buildServer({ executor, catalogue, statementTimeoutMs: settings.statementTimeoutMs });
     const shutDown = async () => {
       await app.close();
       await executor.close();

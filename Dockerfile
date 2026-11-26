@@ -1,8 +1,10 @@
 # The query engine service. Node runs the TypeScript sources directly, so there is no build
-# step: the image holds the production dependencies, src/ and migrations/.
+# step: the image holds the production dependencies, src/, schemas/ and migrations/.
 #
 #   docker build -t ccrp-query-engine .
-#   docker run --rm -p 127.0.0.1:3100:3100 -e QUERY_ENGINE_DATABASE_URL=... ccrp-query-engine
+#   docker run --rm -p 127.0.0.1:3100:3100 -e QUERY_ENGINE_DATABASE_URL=... \
+#     -e QUERY_ENGINE_CATALOGUE_FILE=/config/catalogue.json -v /path/to/catalogue.json:/config/catalogue.json:ro \
+#     ccrp-query-engine
 #
 # Settings: docs/host-setup.md. Keep the Node version in step with .nvmrc.
 
@@ -19,6 +21,7 @@ WORKDIR /app
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY package.json ./
 COPY src ./src
+COPY schemas ./schemas
 COPY migrations ./migrations
 USER node
 EXPOSE 3100

@@ -12,8 +12,9 @@ Status: skeleton. No chapter is written yet.
 - Your fork runs the engine and routes `/api/query/*` to it ([host setup](host-setup.md)).
 - colouring-core's map stack: Leaflet 1.7.1 and react-leaflet 3, built with razzle 4 and webpack 5. The
   chapters assume it.
-- The UI talks to the engine over HTTP only. Use the plan JSON Schema and the TypeScript types file attached
-  to each engine release (*later*); there is no client package.
+- The UI talks to the engine over HTTP only ([API reference](api-reference.md)). Copy the TypeScript types
+  file, `schemas/query-engine.d.ts`, into your UI (its header names the engine and format versions), and build
+  test mocks from the published schemas in `schemas/`; there is no client package.
 
 ## What every chapter contains
 

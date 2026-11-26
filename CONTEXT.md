@@ -24,12 +24,13 @@ host, keeping only those the engine itself uses.
 | Attribute | A piece of information recorded about a building, such as its number of storeys, material or condition. |
 | Buffer | A zone of a chosen distance around a point, line or shape. |
 | Builder | A host UI's click-and-choose interface for composing a plan without writing code; the engine validates its plans. |
+| Catalogue guard | The `check` command's test that every building column is in the field catalogue or on its exclusion list, run in each host's CI. |
 | Clarification | The engine's answer when a request is ambiguous: a question with a fixed set of options (shown by the UI as chips), for an area, a distance or an attribute value. Never a guess. |
 | colouring-core | The shared codebase every Colouring Cities platform is a fork of. Its `buildings` and `geometries` tables are the layout the engine reads. |
 | Compiler | The component that turns a resolved plan into parameterised PostGIS SQL. The only path from plan to SQL. |
 | Completeness | How many buildings in scope have a value recorded against how many do not, for one attribute or jointly for all the attributes a plan uses. A default counts as recorded only where field evidence shows it was observed. *Avoid*: coverage. |
 | Component test | An evaluation run with one part of the engine changed (validation off, or the correct map reference injected) to see what that part contributes. Only server configuration can enable it. |
-| Confirmed matches | The buildings with every queried attribute recorded that meet all of a plan's conditions. Zero confirmed matches with incomplete data is not evidence that no such buildings exist. |
+| Confirmed matches | The buildings for which a plan's whole filter is TRUE under three-valued logic: a blank never makes a condition true. With "or", a building can match while another queried attribute is blank; the share counts only the matches among recorded buildings. Zero confirmed matches with incomplete data is not evidence that no such buildings exist. |
 | CQL2 | OGC's Common Query Language (standard 21-065r2). The plan's attribute filters use a subset of its JSON encoding. |
 | Cross-tab | A table counting buildings by two attributes at once. |
 | Database copy | A database an evaluation queries instead of the live one: a frozen snapshot, a patched copy (gaps filled with flagged synthetic values) or a masked copy (known values removed at a set rate). |
@@ -42,6 +43,7 @@ host, keeping only those the engine itself uses.
 | Engine schema | `query_engine`: the database schema holding the engine's own tables, created by its migrations. |
 | Entry route | A way of producing a plan: the builder or the assistant. |
 | Evaluation mode | A server setting, off by default, that accepts component-test inputs and logs each request in full for research. Off, those inputs are rejected and logs hold no question text or location. |
+| Exclusion list | The catalogue's `excludedColumns`: building columns the engine does not query, each with its reason (no definition, a type plan format 1 cannot compare, nested values). |
 | Executor | The component that runs SQL: one read-only transaction per run, with the statement timeout set inside it. The engine's only path to the database. |
 | Field catalogue | The versioned file listing every field a host defines (category, title, type, allowed values), generated from the host's own field definitions. With the missing-value metadata, it is what the engine knows about attributes. |
 | Footprint | The outline of a building as seen from above, stored in colouring-core's `geometries` table in EPSG:3857. |
@@ -60,7 +62,7 @@ host, keeping only those the engine itself uses.
 | Point on surface | The one point guaranteed to lie on a footprint (PostGIS `ST_PointOnSurface`) that decides which area a building is in. |
 | PostGIS | The extension that gives PostgreSQL geographic abilities; the engine's compile target. |
 | Provenance | The recorded origin of a dataset: source, licence, date, processing, limitations. |
-| Recorded count | The buildings in the applicable population with every queried attribute recorded; the denominator for shares among recorded buildings. |
+| Recorded count | The buildings in the applicable population with every queried attribute recorded (an attribute tested only for being recorded or blank does not count: that test is never unknown); the denominator for shares among recorded buildings. |
 | Reference layer | A layer the engine provides for everyone, such as district boundaries, loaded as data with its provenance. |
 | Resolving | Deciding which map reference a request's wording means; when several are eligible, returning a clarification instead of guessing. |
 | Snapshot | A copy of the data taken at a known, recorded moment. |

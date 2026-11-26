@@ -6,7 +6,7 @@ import { describe, test } from 'node:test';
 import { migrateUp } from '../src/migrations.ts';
 import { copyOfCoreDatabase, testEnvironment, withClient, type DatabaseCopy } from './support/databases.ts';
 import { runNode } from './support/processes.ts';
-import { freePort, startService } from './support/service.ts';
+import { FIXTURE_CATALOGUE, freePort, startService } from './support/service.ts';
 
 const env = testEnvironment();
 
@@ -60,7 +60,11 @@ describe('start-up check', () => {
   const start = (settings: Record<string, string>) => runNode(['src/main.ts'], settings, 20_000);
 
   async function refusal(settings: Record<string, string>, expected: RegExp): Promise<string> {
-    const result = await start({ QUERY_ENGINE_PORT: String(await freePort()), ...settings });
+    const result = await start({
+      QUERY_ENGINE_PORT: String(await freePort()),
+      QUERY_ENGINE_CATALOGUE_FILE: FIXTURE_CATALOGUE,
+      ...settings,
+    });
     assert.equal(result.code, 1, `expected the service to refuse to start; it printed:\n${result.stdout}${result.stderr}`);
     assert.match(result.stderr, /The query engine cannot start/);
     assert.match(result.stderr, expected);
