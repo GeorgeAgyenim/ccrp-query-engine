@@ -27,7 +27,7 @@ settings; each change is listed here with what a host must do.
 - `npm test`: a throwaway PostGIS database built from colouring-core's migrations at a pinned commit, with
   synthetic fixtures; CI on PostgreSQL 18 with PostGIS 3.6.
 - Documentation: host setup guide, API reference, UI integration guide (skeleton), decision records 0001 to
-  0008 (0007 proposed), glossary, tools inventory, contributing guide.
+  0008, glossary, tools inventory, contributing guide.
 
 ### Host action
 

@@ -12,5 +12,5 @@ each says which record it came from. A changed decision gets a new record that s
 | [0004](0004-reference-layers-in-two-generic-postgis-tables.md) | Reference layers live in one layer catalogue and one feature table, loaded as data |
 | [0005](0005-spatial-membership-and-distance-rules.md) | Buildings are placed by a point on their footprint; distances are geodesic metres from the edge |
 | [0006](0006-engine-is-a-separate-instance-neutral-service.md) | The engine is a separate, instance-neutral service in its own public repository |
-| [0007](0007-engine-schema-role-and-migrations.md) | The engine's schema, group role and migrations, and a start-up check that fails closed (proposed) |
+| [0007](0007-engine-schema-role-and-migrations.md) | The engine's schema, group role and migrations, and a start-up check that fails closed |
 | [0008](0008-log-errors-without-personal-data.md) | Log errors without what people sent or who they are |
