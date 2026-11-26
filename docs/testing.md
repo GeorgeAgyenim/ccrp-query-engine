@@ -39,7 +39,10 @@ the pass and fail counts.
 4. Loads small, made-up fixtures from `test/fixtures/`. The query tests read them with the fixture field
    catalogue, `test/fixtures/catalogue.json`; `count-in-view.sql` tabulates its buildings and where each
    lies, so every expected count can be checked by hand.
-5. Runs every test, then drops the database.
+5. Runs every test, then drops the database. Some tests make their own copy of the database, dropped the
+   same way. One is `test/run-time.test.ts`: it loads a made-up map of 20,000 buildings
+   (`test/fixtures/many-buildings.sql`) and requires a question about all of them to be answered within 2 s,
+   both before and after the database has gathered its statistics on them (`ANALYZE`).
 
 The same download of colouring-core holds its field definitions (`app/src/frontend/config/`), from which
 the catalogue tests generate core's catalogue and run the `check` command against core's schema.

@@ -44,13 +44,16 @@ This repository is **public**. Every commit, fixture, doc, issue and log line is
 How to run them: the [testing guide](docs/testing.md).
 
 - Tests sit at the seams a caller can observe: the service over HTTP and as a process
-  (`test/service.test.ts`, and the query API in `test/query-api.test.ts`), the executor as the engine login
+  (`test/service.test.ts`, the query API in `test/query-api.test.ts`, and how long it takes to answer about
+  many buildings in `test/run-time.test.ts`), the executor as the engine login
   (`test/executor.test.ts`), the migrate command and the role's privileges (`test/engine-role.test.ts`), the
   `catalogue` and `check` commands (`test/commands.test.ts`), and the published types file
   (`test/types-file.test.ts`).
 - All run against a real PostGIS database. Expected values are hand-written literals.
-- New fixtures go in `test/fixtures/<name>.sql` and in the `FIXTURES` list in `scripts/test.ts`. A fixture
-  says, in its header, which buildings it holds and why, so expected values can be checked by hand.
+- New fixtures go in `test/fixtures/<name>.sql` and in the `FIXTURES` list in `scripts/test.ts`. The exception
+  is a fixture a test loads into its own copy of the database, so that it does not change what the other tests
+  count: `many-buildings.sql` (20,000 buildings) is one. A fixture says, in its header, which buildings it
+  holds and why, so expected values can be checked by hand.
 - The JSON Schemas in `schemas/` are the published contract. Change one only with its decision record, then
   run `npm run types`.
 - The test database is built from colouring-core's migrations at the commit pinned in

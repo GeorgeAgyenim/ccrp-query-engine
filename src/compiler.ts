@@ -133,15 +133,24 @@ export function compileCount(plan: Plan, catalogue: FieldCatalogue): CompiledCou
       : comparedFields.map((field) => `${aliases.get(field.key) as string} IS NOT NULL`).join(' AND ');
   const columns = fields.map((field, index) => `,\n           ${normalised(field)} AS f${index + 1}`).join('');
 
+  // Two steps (ADR-0012): first list the footprints (building outlines) in the view, using the
+  // outlines alone; then look up each listed footprint's building by its number, geometry_id.
+  // MATERIALIZED tells PostgreSQL to finish the first step on its own. Without it, PostgreSQL
+  // merges the steps and must guess how many footprints are in the view; it has no statistics for
+  // that, guesses about 1 in 10,000, and on a whole-city view can then check every building
+  // against the footprints one by one (seconds instead of a tenth of a second).
   const sql = `WITH view_area AS (
     SELECT ST_Transform(${envelope}, ${FOOTPRINT_SRID}) AS geom
-), scope AS (
-    SELECT b.building_id${columns}
-      FROM public.buildings AS b
-      JOIN public.geometries AS g ON g.geometry_id = b.geometry_id
+), footprints_in_view AS MATERIALIZED (
+    SELECT g.geometry_id
+      FROM public.geometries AS g
       CROSS JOIN view_area AS v
      WHERE g.geometry_geom && v.geom
        AND ST_Covers(v.geom, ST_PointOnSurface(g.geometry_geom))
+), scope AS (
+    SELECT b.building_id${columns}
+      FROM footprints_in_view
+      JOIN public.buildings AS b ON b.geometry_id = footprints_in_view.geometry_id
 )
 SELECT transaction_timestamp() AS as_of,
        count(*) AS spatial_population,
