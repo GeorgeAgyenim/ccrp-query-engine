@@ -9,16 +9,16 @@ settings; each change is listed here with what a host must do.
 
 ### Added
 
-- The query API, version 1 ([API reference](docs/api-reference.md); proposed in ADR-0011):
+- The query API, version 1 ([API reference](docs/api-reference.md); ADR-0011):
   `GET /v1/catalogue`, `GET /v1/plan-schema`, `POST /v1/validate` and `POST /v1/run`. A run counts the
   buildings in the current view that meet attribute conditions and answers with the spatial population, the
   recorded count, the confirmed matches, the share among recorded buildings (undefined, with its reason, when
   nothing is recorded), "as of", the plan, and one templated sentence.
-- Plan format 1.0.0 (proposed in ADR-0010), published as `schemas/plan-1.schema.json`: a viewport area,
+- Plan format 1.0.0 (ADR-0010), published as `schemas/plan-1.schema.json`: a viewport area,
   filter steps in a CQL2-JSON subset (comparisons, `and`/`or`/`not`, `between`, `in`, the array functions,
   `recorded`, `blank`) and a number output. Invalid plans get plain-English messages naming the step and the
   field's title.
-- Catalogue format 1.0.0 (proposed in ADR-0009), `schemas/catalogue-1.schema.json`, and
+- Catalogue format 1.0.0 (ADR-0009), `schemas/catalogue-1.schema.json`, and
   `node src/cli.ts catalogue`, which writes a host's field catalogue from its `data-fields-config.ts` and
   column types without running the host's code.
 - `node src/cli.ts check`, for a host's CI: the buildings layout and the catalogue match the database, and

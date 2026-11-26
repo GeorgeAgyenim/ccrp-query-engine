@@ -1,9 +1,9 @@
 # ADR-0011: HTTP API version 1: four routes, a status-tagged answer, and one templated sentence
 
-- Status: Proposed (one-way door: every host UI calls these routes and reads these payloads)
+- Status: Accepted 2026-11-26 (one-way door: every host UI calls these routes and reads these payloads)
 - Date: 2026-11-26
 - Origin: new in the engine repository (query-engine ticket 02); makes ADR-0006's API concrete
-- Deciders: proposed by Claude (Anthropic) as engineer; awaiting the product owner
+- Deciders: proposed by Claude (Anthropic) as engineer; accepted by the product owner 2026-11-26
 - Related: ADR-0006 (separate service), ADR-0008 (logs), ADR-0009 (catalogue), ADR-0010 (plan format)
 
 ## Context
