@@ -56,6 +56,9 @@ settings; each change is listed here with what a host must do.
 - Generate a field catalogue with the `catalogue` command, commit it with your platform, and set
   `QUERY_ENGINE_CATALOGUE_FILE` (now required). Run `check` in your CI
   ([host setup guide](docs/host-setup.md#the-field-catalogue)).
+- If you put the earlier nginx block from the host setup guide in place, replace it with the new one, which
+  stops passing the platform's cookies and the browser's other headers to the engine
+  ([Reverse proxy](docs/host-setup.md#reverse-proxy)).
 
 ### Changed
 
@@ -63,3 +66,13 @@ settings; each change is listed here with what a host must do.
   used only by AI coding agents, such as `CLAUDE.md`, are no longer part of the repository.
 - The README is now a short overview and setup guide for platforms. How to run the tests moved to the
   [testing guide](docs/testing.md).
+- The host setup guide covers what the first platform to follow it found missing or unclear:
+  - running the migrations without the owner's password on the command line;
+  - servers that still store new passwords as `md5`, and when `pg_hba.conf` needs no new line;
+  - generating the catalogue from a database built from the platform's migrations, and how a drifted
+    database shows in `check`;
+  - an nginx block that sends on only the headers the engine reads (the earlier one passed every header,
+    cookies included);
+  - forwarding `/api/query/*` from the platform's own app instead of nginx;
+  - pinning an engine commit in CI, running the CI steps on the runner rather than inside a
+    `postgis/postgis` container (Node.js 26 needs `libatomic`), and an example GitHub Actions job.
