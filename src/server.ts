@@ -1,9 +1,10 @@
 // The engine's HTTP API. Routes are listed in docs/api-reference.md; keep the two in step.
 //
-// Request logs name the route pattern, status and duration only: never the query string,
+// A request's log line holds its method, route pattern, status and duration (beside pino's
+// level, time, process id, server host name and request counter): never the query string,
 // body, headers or client address, which can carry a person's location or identity.
 
-import Fastify, { type FastifyInstance } from 'fastify';
+import Fastify, { LogController, type FastifyInstance } from 'fastify';
 import type { Executor } from './executor.ts';
 import { describeError } from './safe-log.ts';
 
@@ -13,7 +14,7 @@ export interface ServerOptions {
 
 export function buildServer(options: ServerOptions): FastifyInstance {
   // JSON log lines on stdout. Fastify's own request logging is off: it records the client address.
-  const app = Fastify({ logger: true, disableRequestLogging: true });
+  const app = Fastify({ logger: true, logController: new LogController({ disableRequestLogging: true }) });
 
   app.addHook('onResponse', async (request, reply) => {
     request.log.info(
