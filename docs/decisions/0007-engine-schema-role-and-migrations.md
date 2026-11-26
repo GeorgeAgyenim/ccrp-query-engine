@@ -1,10 +1,13 @@
 # ADR-0007: The engine's schema, group role and migrations, and a start-up check that fails closed
 
-- Status: Accepted (one-way door: the schema and role names are what hosts' databases and grants refer to)
+- Status: Proposed, awaiting the product owner's acceptance (one-way door: the schema, role and setting
+  names are what hosts' databases, grants and deployments refer to). Implemented in query-engine ticket 01;
+  nothing is released, so the names can still change at no cost to any host.
 - Date: 2026-11-26
 - Origin: new in the engine repository (query-engine ticket 01); implements ADR-0001 and ADR-0006
-- Deciders: Claude (Anthropic) as engineer, within the product owner's accepted ADR-0001 and ADR-0006
-- Related: ADR-0001, ADR-0004, ADR-0006
+- Deciders: proposed by Claude (Anthropic) as engineer, within the product owner's accepted ADR-0001 and
+  ADR-0006
+- Related: ADR-0001, ADR-0004, ADR-0006, ADR-0008
 
 ## Context
 
@@ -41,13 +44,21 @@ see only buildings, footprints and its own tables (ADR-0001). Several facts shap
   that name exists with a login or any attribute. Its down migration drops the role only when no other
   database still grants it anything; otherwise it keeps it and says so.
 - **Start-up check, failing closed.** Before serving, the service refuses to start, printing each problem as a
-  plain sentence, when: its login is a superuser; it can read any relation other than the host's buildings
-  and geometries and the engine's tables (relations owned by an extension, such as PostGIS's
-  `spatial_ref_sys`, are allowed: every login can read them); it can change any relation; colouring-core's
-  tables or columns are missing, or footprints are not in EPSG:3857; or the engine's migrations are not
-  current.
+  plain sentence, when:
+  - its login is a superuser, or has CREATEDB, CREATEROLE, REPLICATION or BYPASSRLS;
+  - it can read any relation, or any column of one, other than the host's buildings and geometries and the
+    engine's tables (objects owned by an extension, such as PostGIS's `spatial_ref_sys`, are allowed: every
+    login can read them);
+  - it can change any relation or any column of one, use any sequence, or create objects in any schema;
+  - colouring-core's tables or columns are missing, or footprints are not in EPSG:3857;
+  - the engine's migrations are not current, or it cannot read their record.
 - **Statement timeout.** Set in every transaction by the executor (ADR-0001), default 10 s, five times the
-  2 s answer target, so a slow but legitimate plan still answers while a runaway one is cancelled.
+  2 s answer target, so a slow but legitimate plan still answers while a runaway one is cancelled. Each
+  connection also opens with read-only transactions and the same timeout as session defaults, so a
+  statement that ended the transaction early still cannot write or run unbounded. Connecting gives up
+  after 5 s.
+- **Setting names.** `QUERY_ENGINE_*` environment variables (`docs/host-setup.md#settings`); the migrate
+  command alone reads `QUERY_ENGINE_MIGRATION_DATABASE_URL`.
 
 ## Alternatives considered
 

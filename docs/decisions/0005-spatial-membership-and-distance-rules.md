@@ -9,9 +9,9 @@
 ## Context
 
 colouring-core stores footprints in EPSG:3857 (Web Mercator), as polygons and a few multipolygons. Lengths
-measured in EPSG:3857 are too long by a factor of 1 / cos(latitude): about 0.7% at 6.7° from the equator, 15%
+measured in EPSG:3857 are too long by a factor of 1 / cos(latitude): about 1.5% at 10° from the equator, 15%
 at 30° and 61% at 51.5°. One UTM zone is metric, but each covers only 6° of longitude, so an instance whose
-area crosses a zone boundary (the 0° meridian, for one) would be wrong on one side of it. Counts also need
+area crosses a zone boundary (one every 6° of longitude) would be wrong on one side of it. Counts also need
 explicit rules for footprints that cross an edge, buildings on a shared edge, overlapping polygons and
 distance thresholds.
 
@@ -38,7 +38,7 @@ distance thresholds.
 |---|---|---|
 | Centroid | The geometric centre decides membership | For an L- or U-shaped footprint it can fall outside the building |
 | Any intersection for membership | A footprint touching two districts counts in both | Double counts; group totals exceed the population |
-| Planar metres in EPSG:3857 | Use stored coordinates directly | Too long by 1 / cos(latitude): 0.7% near the equator, far more further from it |
+| Planar metres in EPSG:3857 | Use stored coordinates directly | Too long by 1 / cos(latitude): 1.5% at 10°, far more further from the equator |
 | One UTM zone | One metric projection | Wrong outside the zone's 6° of longitude |
 
 ## Consequences
