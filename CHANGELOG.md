@@ -36,5 +36,5 @@ settings; each change is listed here with what a host must do.
 
 ### Changed
 
-- The README is now a guide for readers: what the engine is, its status, how to try it and where the
-  docs are. How to run the tests moved to the [testing guide](docs/testing.md).
+- The README is now a short overview and setup guide for platforms. How to run the tests moved to the
+  [testing guide](docs/testing.md).
