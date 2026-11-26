@@ -33,3 +33,8 @@ settings; each change is listed here with what a host must do.
 
 - Run the engine's migrations, create the engine's login and grant it `query_engine_reader`
   ([host setup guide](docs/host-setup.md)).
+
+### Changed
+
+- The README is now a guide for readers: what the engine is, its status, how to try it and where the
+  docs are. How to run the tests moved to the [testing guide](docs/testing.md).

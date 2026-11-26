@@ -222,4 +222,4 @@ A host then replaces `build: .` in its compose file with `image: ghcr.io/georgea
 
 ## Running the engine's tests
 
-See the [README](../README.md#test). A host also runs the engine's `check` command in its own CI (*later*).
+See the [testing guide](testing.md). A host also runs the engine's `check` command in its own CI (*later*).
