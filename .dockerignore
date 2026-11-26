@@ -1,0 +1,10 @@
+.git
+.github
+.cache
+node_modules
+test
+scripts
+docs
+tasks
+.env
+.env.*

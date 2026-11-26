@@ -1,0 +1,7 @@
+node_modules/
+# colouring-core migrations, fetched by the test command at the pinned commit
+.cache/
+# Settings files hold credentials: never commit them
+.env
+.env.*
+!.env.example

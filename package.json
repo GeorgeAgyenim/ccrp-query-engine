@@ -1,0 +1,26 @@
+{
+  "name": "ccrp-query-engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Map-grounded spatial query engine and assistant for Colouring Cities (CCRP) platforms",
+  "license": "GPL-3.0-only",
+  "type": "module",
+  "engines": {
+    "node": ">=26.13.1"
+  },
+  "scripts": {
+    "start": "node src/main.ts",
+    "migrate": "node src/cli.ts migrate",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/test.ts"
+  },
+  "dependencies": {
+    "fastify": "5.12.8",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6",
+    "@types/pg": "8.23.1",
+    "typescript": "7.0.2"
+  }
+}
