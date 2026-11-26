@@ -19,6 +19,7 @@ Last checked: 2026-11-26.
 | Package | Version | Licence | Role | Alternatives rejected |
 |---|---|---|---|---|
 | fastify | 5.12.8 | MIT | HTTP framework: routing, JSON handling, error handling, structured (pino) logs; JSON Schema request validation for the plan API later | Express 5.3.0: familiar from colouring-core, but no built-in request validation or structured logging, so two more dependencies. Hono 4.13: younger on Node. `node:http` alone: routing, parsing and error handling by hand |
+| ajv | 8.20.0 | MIT | Validates plans and catalogue files against the published JSON Schemas (2020-12 dialect, `ajv/dist/2020.js`), so no plan the schema rejects can run. Already installed through fastify at the same version; now a direct dependency | Hand-written shape checks only: the published schema and the engine could disagree. `@cfworker/json-schema`: another package for what fastify already brings |
 | pg (node-postgres) | 8.23.1 | MIT | PostgreSQL client. Values travel as server-side parameters (`$1`), and the extended protocol is forced so a query is one statement | pg-promise 12.9.0 (colouring-core's): formats values into the SQL text on the client. postgres.js 4.1.1 (Unlicense): tagged-template API, less familiar to contributors |
 | @types/node | 26.6.6 | MIT | Node type definitions (development only) | none |
 | @types/pg | 8.23.1 | MIT | pg type definitions (development only) | none |
@@ -45,3 +46,9 @@ Last checked: 2026-11-26.
 | actions/setup-node | v7.1.0, pinned to commit `949feb2413d6458794dcd2491c4babbbce0c15c1` | MIT | CI Node install from `.nvmrc`, npm cache | none |
 | GitHub Actions runner | `ubuntu-24.04` | n/a | CI host | none |
 | actionlint | 1.7.7 (run with Docker, not a dependency) | MIT | Lints the CI workflow before commit | none |
+
+## Build scripts
+
+| Tool | Version | Licence | Role | Alternatives rejected |
+|---|---|---|---|---|
+| `scripts/generate-types.ts` | in this repository | GPL-3.0 | Writes `schemas/query-engine.d.ts` from the JSON Schemas (`npm run types`); handles only the keywords the schemas use and stops on any other. A test fails when the committed file is out of date | json-schema-to-typescript 16.0.0 (MIT): eight dependencies including prettier, lodash and js-yaml, and built around JSON Schema draft 4 rather than 2020-12 (`prefixItems`) |

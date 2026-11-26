@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ccrp-query-engine:schema:api:1",
+  "title": "Api",
+  "description": "Request and response bodies of the engine's HTTP API version 1 (docs/api-reference.md, docs/decisions/0011-http-api-v1-routes-and-answer.md).",
+  "$defs": {
+    "PlanRequest": {
+      "description": "Body of POST /v1/validate and POST /v1/run.",
+      "type": "object",
+      "required": ["plan"],
+      "additionalProperties": false,
+      "properties": { "plan": { "$ref": "urn:ccrp-query-engine:schema:plan:1.0.0" } }
+    },
+    "ValidateResponse": {
+      "description": "200 from POST /v1/validate.",
+      "oneOf": [{ "$ref": "#/$defs/ValidResponse" }, { "$ref": "#/$defs/InvalidResponse" }]
+    },
+    "RunResponse": {
+      "description": "200 (answer) or 422 (invalid) from POST /v1/run.",
+      "oneOf": [{ "$ref": "#/$defs/Answer" }, { "$ref": "#/$defs/InvalidResponse" }]
+    },
+    "ValidResponse": {
+      "type": "object",
+      "required": ["status"],
+      "additionalProperties": false,
+      "properties": { "status": { "const": "valid" } }
+    },
+    "InvalidResponse": {
+      "description": "The plan cannot run; nothing was run.",
+      "type": "object",
+      "required": ["status", "errors"],
+      "additionalProperties": false,
+      "properties": {
+        "status": { "const": "invalid" },
+        "errors": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/PlanProblem" } }
+      }
+    },
+    "PlanProblem": {
+      "description": "One problem with a plan, as a sentence a person can act on.",
+      "type": "object",
+      "required": ["message", "step", "field", "path"],
+      "additionalProperties": false,
+      "properties": {
+        "message": { "description": "Names the step and the field's title.", "type": "string" },
+        "step": { "description": "The step's number, from 1, or null.", "type": ["integer", "null"] },
+        "field": { "description": "The field's catalogue key, or null.", "type": ["string", "null"] },
+        "path": { "description": "JSON Pointer to the part of the plan, \"\" for the whole plan.", "type": "string" }
+      }
+    },
+    "Answer": {
+      "description": "200 from POST /v1/run: the counts behind the number output.",
+      "type": "object",
+      "required": [
+        "status",
+        "asOf",
+        "plan",
+        "spatialPopulation",
+        "recordedCount",
+        "confirmedMatches",
+        "share",
+        "fields",
+        "sentence"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "status": { "const": "answer" },
+        "asOf": { "description": "The run's transaction time, ISO 8601 in UTC.", "type": "string" },
+        "plan": { "$ref": "urn:ccrp-query-engine:schema:plan:1.0.0" },
+        "spatialPopulation": { "description": "Mapped buildings in the area.", "type": "integer", "minimum": 0 },
+        "recordedCount": {
+          "description": "Buildings in the area with every queried field recorded.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "confirmedMatches": {
+          "description": "Buildings in the area for which the whole filter is TRUE under three-valued logic.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "share": { "$ref": "#/$defs/Share" },
+        "fields": { "type": "array", "items": { "$ref": "#/$defs/FieldUsed" } },
+        "sentence": { "description": "The answer in one templated sentence.", "type": "string" }
+      }
+    },
+    "Share": {
+      "description": "Confirmed matches among recorded buildings over the recorded count. Undefined, never 0%, when the recorded count is zero.",
+      "type": "object",
+      "required": ["numerator", "denominator", "value", "isUndefined", "undefinedReason"],
+      "additionalProperties": false,
+      "properties": {
+        "numerator": { "type": "integer", "minimum": 0 },
+        "denominator": { "type": "integer", "minimum": 0 },
+        "value": { "description": "From 0 to 1, or null when undefined.", "type": ["number", "null"] },
+        "isUndefined": { "type": "boolean" },
+        "undefinedReason": { "type": ["string", "null"] }
+      }
+    },
+    "FieldUsed": {
+      "description": "A field the plan queries.",
+      "type": "object",
+      "required": ["key", "title", "ambiguity"],
+      "additionalProperties": false,
+      "properties": {
+        "key": { "type": "string" },
+        "title": { "type": "string" },
+        "ambiguity": { "type": ["string", "null"] }
+      }
+    },
+    "CatalogueResponse": {
+      "description": "200 from GET /v1/catalogue: the fields grouped by category, in the host's order.",
+      "type": "object",
+      "required": ["formatVersion", "categories"],
+      "additionalProperties": false,
+      "properties": {
+        "formatVersion": { "type": "string" },
+        "categories": { "type": "array", "items": { "$ref": "#/$defs/CatalogueCategory" } }
+      }
+    },
+    "CatalogueCategory": {
+      "type": "object",
+      "required": ["key", "title", "fields"],
+      "additionalProperties": false,
+      "properties": {
+        "key": { "type": "string" },
+        "title": { "type": "string" },
+        "fields": {
+          "type": "array",
+          "items": { "$ref": "urn:ccrp-query-engine:schema:catalogue:1.0.0#/$defs/Field" }
+        }
+      }
+    },
+    "ErrorResponse": {
+      "description": "400, 503 or 500: the request could not be handled.",
+      "type": "object",
+      "required": ["error"],
+      "additionalProperties": false,
+      "properties": { "error": { "type": "string" } }
+    }
+  }
+}
