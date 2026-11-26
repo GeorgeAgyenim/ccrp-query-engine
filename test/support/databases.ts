@@ -32,7 +32,7 @@ export function testEnvironment(env: NodeJS.ProcessEnv = process.env): TestEnvir
   if (missing.length > 0) {
     throw new Error(
       `No test database is configured (${missing.join(', ')} not set). ` +
-        'Run the suite with `npm test`, which builds the test database; see README.md.',
+        'Run the suite with `npm test`, which builds the test database; see docs/testing.md.',
     );
   }
   const read = (name: string) => env[name] as string;
