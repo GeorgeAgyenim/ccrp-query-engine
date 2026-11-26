@@ -25,7 +25,8 @@ by hyphens. Never commit straight to `main`.
 ## Pull requests
 
 - The title or first line cites `query-engine ticket NN`.
-- `npm run typecheck` and `npm test` pass (CI runs both, plus the image build).
+- `npm run typecheck` and `npm test` pass (CI runs both, plus the image build). The
+  [testing guide](docs/testing.md) shows how to run them.
 - Docs change in the same pull request as the code: the [API reference](docs/api-reference.md), the
   [host setup guide](docs/host-setup.md), the [changelog](CHANGELOG.md) under *Unreleased*, and the
   [tools inventory](docs/tools-inventory.md) for any new or changed dependency.

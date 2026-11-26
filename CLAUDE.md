@@ -46,13 +46,17 @@ This repository is **public**. Every commit, fixture, doc, issue and log line is
 
 ## Testing
 
+How to run the suite: [docs/testing.md](docs/testing.md). Keep README.md a guide for human readers:
+what the engine is, its status, how to try it and where the docs are. Testing detail, implementation notes
+and working notes belong in docs/, never in the README.
+
 Tests sit at the seams a caller can observe: the service over HTTP and as a process (`test/service.test.ts`),
 the executor as the engine login (`test/executor.test.ts`), the migrate command and the role's privileges
 (`test/engine-role.test.ts`). All run against a real PostGIS database; expected values are hand-written
 literals.
 
-`npm test` needs `QUERY_ENGINE_TEST_ADMIN_URL`, a superuser URL on a disposable PostGIS server (README
-shows a Docker one). It builds the database from colouring-core's migrations at the commit pinned in
+`npm test` needs `QUERY_ENGINE_TEST_ADMIN_URL`, a superuser URL on a disposable PostGIS server
+([docs/testing.md](docs/testing.md) shows a Docker one). It builds the database from colouring-core's migrations at the commit pinned in
 `scripts/core-migrations.ts`, so changing that commit means updating `docs/tools-inventory.md` too.
 `npm test -- <file>` runs one file. New fixtures go in `test/fixtures/<name>.sql` and in the `FIXTURES` list
 in `scripts/test.ts`.

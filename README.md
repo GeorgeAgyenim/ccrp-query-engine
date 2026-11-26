@@ -1,27 +1,58 @@
-# ccrp-query-engine
+# CCRP Query Engine
 
-Map-grounded spatial query engine and assistant for Colouring Cities (CCRP) platforms.
+Ask questions about the buildings on a [Colouring Cities](https://github.com/colouring-cities) map, and get
+answers that are honest about missing data.
 
-A person asks a spatial question about buildings, by clicking in a builder or typing in English, about an
-area taken from the map: a district, the current view, the selected building or shapes they draw. The engine
-answers in a way that is checked and honest about missing data: every answer says how many buildings were in
-scope, how many had the queried details recorded, how many matched, and when the data was read. Any
-colouring-core instance can run it next to its own platform, pointed at its own database and field
-definitions, and build its own screens from the [UI integration guide](docs/ui-integration-guide.md).
+> **Status: early development, not ready for use yet.** The service runs and protects the database, but it
+> does not answer questions yet. See [What works today](#what-works-today).
 
-## Status
+## What it does
 
-**Pre-release.** What exists: the service with its health endpoint, the start-up check, the engine's
-read-only database role, and the test database. Plans, answers and the assistant arrive in later releases;
-see the [changelog](CHANGELOG.md).
+Someone using a Colouring Cities platform picks an area on the map: a district, the current view, a
+selected building, or a shape they draw. Then they ask a question about the buildings in it, either by
+clicking options or by typing in plain English. For example: *"How many residential buildings in poor
+condition are in this area?"*
 
-## Licence
+Crowdsourced building data is incomplete, so a bare count can mislead. Every answer therefore says:
 
-[GPL-3.0](LICENSE), the same licence as colouring-core.
+- how many buildings were in the area;
+- how many have the asked-about details recorded;
+- how many match;
+- when the data was read.
 
-## Run
+The matching buildings are highlighted on the map and can be downloaded.
 
-Needs Node.js 26.13.1 (`.nvmrc`; `nvm use` picks it up) and a colouring-core PostgreSQL/PostGIS database.
+## How it fits with your platform
+
+The engine is a separate program that runs next to an existing colouring-core platform. Your platform's code
+stays as it is, apart from one forwarding route and the screens you add.
+
+```text
+Your Analyse screen  →  your platform (/api/query/*)  →  query engine  →  your database (read-only)
+```
+
+- It reads your database through its own login, which can see building data and nothing else: no user
+  accounts or logs.
+- It learns your fields from your platform's own field definitions, so it fits any Colouring Cities
+  instance.
+- You build the screens in your own frontend. The [UI integration guide](docs/ui-integration-guide.md)
+  walks you through them.
+
+## What works today
+
+| Part | State |
+|---|---|
+| Service, health check and start-up safety check | Done |
+| Read-only database login, and a time limit on every query | Done |
+| Answering questions (plans, counts, map results) | Next |
+| Plain-English assistant | Later |
+| Download and share | Later |
+
+The [changelog](CHANGELOG.md) lists each release.
+
+## Try it locally
+
+You need Node.js 26 (`nvm use` reads `.nvmrc`) and a colouring-core PostgreSQL/PostGIS database.
 
 ```sh
 npm ci
@@ -30,53 +61,24 @@ QUERY_ENGINE_DATABASE_URL='postgres://<engine login>:<password>@<host>:5432/<dat
 curl http://127.0.0.1:3100/health    # {"status":"ok"}
 ```
 
-The engine needs its own restricted login, and refuses to start without one. The
-[host setup guide](docs/host-setup.md) explains the login, every setting, the container image and the
-compose example.
-
-## Test
-
-`npm test` builds a throwaway database from colouring-core's migrations at a pinned commit, applies the
-engine's migrations, loads synthetic fixtures, runs the suite and drops the database. It needs a disposable
-PostGIS server with a superuser it can use, `psql` on the `PATH`, git and network access to GitHub (once,
-to fetch colouring-core into `.cache/`).
-
-Start a local server with Docker, reachable only from this machine:
-
-```sh
-docker run -d --name ccrp-query-engine-test-db \
-  -e POSTGRES_HOST_AUTH_METHOD=trust -p 127.0.0.1:55432:5432 postgis/postgis:18-3.6
-```
-
-Then:
-
-```sh
-export QUERY_ENGINE_TEST_ADMIN_URL=postgres://postgres@127.0.0.1:55432/postgres
-npm run typecheck
-npm test                               # the whole suite
-npm test -- test/executor.test.ts      # one file
-```
-
-Expected first line, then the `node:test` report:
-
-```
-Test database ready in 2.6 s: colouring-core cd5fc563 (59 migrations), engine migrations 001.engine-schema-and-reader-role, fixtures buildings, host-private-tables.
-```
-
-Without `QUERY_ENGINE_TEST_ADMIN_URL` the command fails; it never skips the suite. CI runs the same command
-against a PostGIS service container (`.github/workflows/ci.yml`).
-
-To work offline, point `QUERY_ENGINE_TEST_CORE_REPOSITORY` at a local clone of colouring-core that contains
-the pinned commit (`scripts/core-migrations.ts`); the command fetches from it instead of GitHub. Once fetched,
-the migrations stay in `.cache/` and no network is needed.
+The engine refuses to start unless it has its own restricted login. The
+[host setup guide](docs/host-setup.md) shows how to create that login, and covers every setting, the
+container image and a ready-made compose file.
 
 ## Documentation
 
-- [Host setup guide](docs/host-setup.md): running the engine for a CCRP instance
-- [API reference](docs/api-reference.md)
-- [UI integration guide](docs/ui-integration-guide.md)
-- [Decision records](docs/decisions/README.md)
-- [Glossary](CONTEXT.md)
-- [Tools inventory](docs/tools-inventory.md): versions, licences and alternatives
-- [Contributing](CONTRIBUTING.md) and [CLAUDE.md](CLAUDE.md) (working rules, also for AI agents)
-- [Changelog](CHANGELOG.md)
+- [Host setup guide](docs/host-setup.md): run the engine for your platform.
+- [UI integration guide](docs/ui-integration-guide.md): build the screens.
+- [API reference](docs/api-reference.md): what the engine accepts and returns.
+- [Testing guide](docs/testing.md): run the test suite.
+- [Decision records](docs/decisions/README.md): why it is built this way.
+- [Glossary](CONTEXT.md): the terms used throughout.
+
+## Contributing
+
+Contributions are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers branches, commits and the safety rules
+for this public repository.
+
+## Licence
+
+[GPL-3.0](LICENSE), the same licence as colouring-core.
