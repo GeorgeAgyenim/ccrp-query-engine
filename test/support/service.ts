@@ -33,7 +33,8 @@ export async function startService(env: Record<string, string>): Promise<Running
   let stderr = '';
   child.stdout.on('data', (chunk: Buffer) => (stdout += chunk.toString()));
   child.stderr.on('data', (chunk: Buffer) => (stderr += chunk.toString()));
-  const exited = new Promise<number | null>((resolve) => child.on('exit', resolve));
+  // 'close', not 'exit': it fires once the output streams are drained too.
+  const exited = new Promise<number | null>((resolve) => child.on('close', resolve));
   const baseUrl = `http://127.0.0.1:${port}`;
 
   const deadline = Date.now() + 15_000;

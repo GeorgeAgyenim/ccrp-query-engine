@@ -49,7 +49,7 @@ async function readablePrivileges(adminUrl: string) {
 
 describe('query_engine_reader', () => {
   test('can SELECT the host buildings and footprints and the engine tables, and nothing else', async () => {
-    const privileges = await readablePrivileges(env.adminUrl);
+    const privileges = await readablePrivileges(env.mainAdminUrl);
     assert.deepEqual(
       privileges.selectable,
       ['public.buildings', 'public.geometries', 'query_engine.migrations', ...POSTGIS_PUBLIC_RELATIONS].sort(),
@@ -58,14 +58,14 @@ describe('query_engine_reader', () => {
   });
 
   test('can write nothing and create nothing', async () => {
-    const privileges = await readablePrivileges(env.adminUrl);
+    const privileges = await readablePrivileges(env.mainAdminUrl);
     assert.deepEqual(privileges.writable, []);
     assert.deepEqual(privileges.sequences, []);
     assert.deepEqual(privileges.creatableSchemas, []);
   });
 
   test('can SELECT every table in the engine schema', async () => {
-    const missing = await withClient(env.adminUrl, async (client) => {
+    const missing = await withClient(env.mainAdminUrl, async (client) => {
       const result = await client.query<{ relation: string }>(
         `SELECT format('%s.%s', n.nspname, c.relname) AS relation
            FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -78,7 +78,7 @@ describe('query_engine_reader', () => {
   });
 
   test('cannot log in', async () => {
-    const roles = await withClient(env.adminUrl, (client) =>
+    const roles = await withClient(env.mainAdminUrl, (client) =>
       client.query(`SELECT rolcanlogin, rolsuper, rolcreatedb, rolcreaterole, rolreplication, rolbypassrls
                       FROM pg_roles WHERE rolname = 'query_engine_reader'`),
     );
@@ -95,7 +95,7 @@ describe('query_engine_reader', () => {
   });
 
   test("refuses a write by a login granted it, even outside the engine's read-only transactions", async () => {
-    await withClient(env.engineUrl, async (client) => {
+    await withClient(env.mainEngineUrl, async (client) => {
       await assert.rejects(
         client.query(`INSERT INTO geometries (geometry_id, source_id) VALUES (999999, 'not allowed')`),
         { code: '42501' }, // insufficient_privilege

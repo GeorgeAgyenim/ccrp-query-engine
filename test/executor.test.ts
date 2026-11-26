@@ -11,7 +11,7 @@ const env = testEnvironment();
 describe('executor, as the engine login', () => {
   let executor: Executor;
   before(() => {
-    executor = createExecutor({ databaseUrl: env.engineUrl, statementTimeoutMs: 5_000 });
+    executor = createExecutor({ databaseUrl: env.mainEngineUrl, statementTimeoutMs: 5_000 });
   });
   after(() => executor.close());
 
@@ -67,7 +67,7 @@ describe('executor statement timeout', () => {
   // The test login has statement_timeout = 1h on its role (scripts/test.ts), so a
   // cancellation here comes from the timeout the executor sets in its transaction.
   test('cancels a query that runs longer than the timeout, then keeps working', async () => {
-    const executor = createExecutor({ databaseUrl: env.engineUrl, statementTimeoutMs: 200 });
+    const executor = createExecutor({ databaseUrl: env.mainEngineUrl, statementTimeoutMs: 200 });
     try {
       const started = performance.now();
       await assert.rejects(

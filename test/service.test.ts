@@ -11,7 +11,7 @@ const env = testEnvironment();
 
 describe('health endpoint', () => {
   test('answers ok when the database has the host layout and the engine login', async () => {
-    const service = await startService({ QUERY_ENGINE_DATABASE_URL: env.engineUrl });
+    const service = await startService({ QUERY_ENGINE_DATABASE_URL: env.mainEngineUrl });
     try {
       const response = await fetch(`${service.baseUrl}/health`);
       assert.equal(response.status, 200);
@@ -35,10 +35,9 @@ describe('health endpoint', () => {
   });
 
   test('logs the route and outcome of a request, not the query string or the client address', async () => {
-    const service = await startService({ QUERY_ENGINE_DATABASE_URL: env.engineUrl });
+    const service = await startService({ QUERY_ENGINE_DATABASE_URL: env.mainEngineUrl });
     try {
       await fetch(`${service.baseUrl}/health?place=private-marker`);
-      await new Promise((resolve) => setTimeout(resolve, 200));
     } finally {
       await service.stop();
     }
@@ -73,13 +72,13 @@ describe('start-up check', () => {
 
   test('refuses to start with a statement timeout that is not a whole number of milliseconds', async () => {
     await refusal(
-      { QUERY_ENGINE_DATABASE_URL: env.engineUrl, QUERY_ENGINE_STATEMENT_TIMEOUT_MS: '10s' },
+      { QUERY_ENGINE_DATABASE_URL: env.mainEngineUrl, QUERY_ENGINE_STATEMENT_TIMEOUT_MS: '10s' },
       /QUERY_ENGINE_STATEMENT_TIMEOUT_MS must be a whole number of milliseconds/,
     );
   });
 
   test('refuses to start when the database cannot be reached, without printing the password', async () => {
-    const unreachable = new URL(env.engineUrl);
+    const unreachable = new URL(env.mainEngineUrl);
     unreachable.port = String(await freePort());
     const stderr = await refusal({ QUERY_ENGINE_DATABASE_URL: unreachable.toString() }, /could not reach the database server/);
     assert.ok(!stderr.includes(decodeURIComponent(unreachable.password)), 'the password is not printed');
@@ -134,7 +133,7 @@ describe('start-up check', () => {
   });
 
   test('refuses to start when logged in as a superuser', async () => {
-    await refusal({ QUERY_ENGINE_DATABASE_URL: env.adminUrl }, /The engine's login is a superuser/);
+    await refusal({ QUERY_ENGINE_DATABASE_URL: env.mainAdminUrl }, /The engine's login is a superuser/);
   });
 
   test("refuses to start when the engine's login can read a contributor table", async () => {

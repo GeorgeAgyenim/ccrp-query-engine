@@ -9,9 +9,9 @@ export interface TestEnvironment {
   /** Superuser on the test server's maintenance database. */
   serverAdminUrl: string;
   /** Superuser on the main test database (core layout, engine migrations, fixtures). */
-  adminUrl: string;
+  mainAdminUrl: string;
   /** The engine's login (granted query_engine_reader) on the main test database. */
-  engineUrl: string;
+  mainEngineUrl: string;
   /** A database with core's migrations only, used as a template for per-test copies. */
   coreTemplate: string;
   /** Every database this run creates starts with this prefix, so teardown can find it. */
@@ -20,8 +20,8 @@ export interface TestEnvironment {
 
 export const TEST_VARIABLES = {
   serverAdminUrl: 'QUERY_ENGINE_TEST_ADMIN_URL',
-  adminUrl: 'QUERY_ENGINE_TEST_MAIN_ADMIN_URL',
-  engineUrl: 'QUERY_ENGINE_TEST_ENGINE_URL',
+  mainAdminUrl: 'QUERY_ENGINE_TEST_MAIN_ADMIN_URL',
+  mainEngineUrl: 'QUERY_ENGINE_TEST_MAIN_ENGINE_URL',
   coreTemplate: 'QUERY_ENGINE_TEST_CORE_TEMPLATE',
   runId: 'QUERY_ENGINE_TEST_RUN_ID',
 } as const satisfies Record<keyof TestEnvironment, string>;
@@ -38,8 +38,8 @@ export function testEnvironment(env: NodeJS.ProcessEnv = process.env): TestEnvir
   const read = (name: string) => env[name] as string;
   return {
     serverAdminUrl: read(TEST_VARIABLES.serverAdminUrl),
-    adminUrl: read(TEST_VARIABLES.adminUrl),
-    engineUrl: read(TEST_VARIABLES.engineUrl),
+    mainAdminUrl: read(TEST_VARIABLES.mainAdminUrl),
+    mainEngineUrl: read(TEST_VARIABLES.mainEngineUrl),
     coreTemplate: read(TEST_VARIABLES.coreTemplate),
     runId: read(TEST_VARIABLES.runId),
   };
@@ -89,8 +89,8 @@ export async function copyOfCoreDatabase(env: TestEnvironment): Promise<Database
   await createDatabase(env.serverAdminUrl, name, env.coreTemplate);
   return {
     name,
-    adminUrl: onDatabase(env.adminUrl, name),
-    engineUrl: onDatabase(env.engineUrl, name),
+    adminUrl: onDatabase(env.mainAdminUrl, name),
+    engineUrl: onDatabase(env.mainEngineUrl, name),
     drop: () => dropDatabase(env.serverAdminUrl, name),
   };
 }

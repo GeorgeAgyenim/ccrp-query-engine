@@ -119,8 +119,8 @@ try {
         stdio: 'inherit',
         env: {
           ...process.env,
-          [TEST_VARIABLES.adminUrl]: adminUrl,
-          [TEST_VARIABLES.engineUrl]: engineUrl.toString(),
+          [TEST_VARIABLES.mainAdminUrl]: adminUrl,
+          [TEST_VARIABLES.mainEngineUrl]: engineUrl.toString(),
           [TEST_VARIABLES.coreTemplate]: coreTemplate,
           [TEST_VARIABLES.runId]: runId,
         },
@@ -139,9 +139,14 @@ try {
       [runId],
     );
     for (const { datname } of rows) await dropDatabase(serverAdminUrl, datname);
-    await client.query(`DROP ROLE IF EXISTS ${client.escapeIdentifier(login)}`);
+    // The test login, and any login a test left behind: every one is named after the run.
+    const roles = await client.query<{ rolname: string }>(
+      'SELECT rolname FROM pg_roles WHERE starts_with(rolname, $1)',
+      [runId],
+    );
+    for (const { rolname } of roles.rows) await client.query(`DROP ROLE ${client.escapeIdentifier(rolname)}`);
   }).catch((error: unknown) => {
-    console.error(`Could not drop the test databases starting ${runId}:`, error);
+    console.error(`Could not drop the test databases and logins starting ${runId}:`, error);
     exitCode = 1;
   });
 }

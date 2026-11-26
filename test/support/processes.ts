@@ -6,14 +6,14 @@ import { fileURLToPath } from 'node:url';
 
 export const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 
-export interface Finished {
+export interface ExitedProcess {
   code: number | null;
   stdout: string;
   stderr: string;
 }
 
 /** Runs `node <args>` from the repo root and waits for it to exit (killed after `timeoutMs`). */
-export function runNode(args: string[], env: Record<string, string>, timeoutMs = 30_000): Promise<Finished> {
+export function runNode(args: string[], env: Record<string, string>, timeoutMs = 30_000): Promise<ExitedProcess> {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, args, { cwd: ROOT, env: baseEnvironment(env) });
     let stdout = '';
@@ -22,7 +22,7 @@ export function runNode(args: string[], env: Record<string, string>, timeoutMs =
     child.stderr.on('data', (chunk: Buffer) => (stderr += chunk.toString()));
     const timer = setTimeout(() => child.kill('SIGKILL'), timeoutMs);
     child.on('error', reject);
-    child.on('exit', (code) => {
+    child.on('close', (code) => {
       clearTimeout(timer);
       resolve({ code, stdout, stderr });
     });
