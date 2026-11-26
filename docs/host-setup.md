@@ -64,6 +64,15 @@ buildings and geometries tables and can create roles; the database owner, typica
 QUERY_ENGINE_MIGRATION_DATABASE_URL='postgres://<owner>:<password>@<host>:5432/<database>' npm run migrate -- up
 ```
 
+To keep the owner's password out of your shell history, leave it out of the URL: the engine's database
+client then reads it from the standard `PGPASSWORD` variable, which you can type without it being shown:
+
+```sh
+read -rsp 'Password: ' PGPASSWORD && export PGPASSWORD && echo
+QUERY_ENGINE_MIGRATION_DATABASE_URL='postgres://<owner>@<host>:5432/<database>' npm run migrate -- up
+unset PGPASSWORD
+```
+
 Expected output, on a database the engine has not seen before:
 
 ```
@@ -96,6 +105,12 @@ ALTER ROLE query_engine_login SET default_transaction_read_only = on;
 
 (`\password` is a psql command; it asks for the password so it never appears in your shell history.)
 
+`\password` stores the password the way the server's `password_encryption` setting says. On a server
+upgraded from an old version that setting can still be `md5`, and a `scram-sha-256` line in `pg_hba.conf`
+(below) then refuses the login. Check with `SHOW password_encryption;`; if it says `md5`, run
+`SET password_encryption = 'scram-sha-256';` in the same psql session before `\password`. A password stored
+that way also works with `md5` lines.
+
 Allow the login to connect from where the engine runs, in `pg_hba.conf`, for example for an engine on the
 same machine:
 
@@ -103,6 +118,8 @@ same machine:
 host  <database>  query_engine_login  127.0.0.1/32  scram-sha-256
 ```
 
+PostgreSQL uses the first line that matches, so if an earlier line already allows password logins from
+there (many installations start with `host all all 127.0.0.1/32 scram-sha-256`), you need no new line.
 Reload PostgreSQL after changing `pg_hba.conf`. Grant the engine's login nothing else: the service refuses
 to start if its login can read or change more than the role allows (below).
 
@@ -114,7 +131,11 @@ file you generate from your own field definitions, `app/src/frontend/config/data
 database's column types ([ADR-0009](decisions/0009-field-catalogue-file-format-and-commands.md)).
 
 Generate it, from the engine's directory, against a database with your current schema (any login can read the
-column types; the engine's own is fine):
+column types; the engine's own is fine). Your CI checks the catalogue against a database built from your
+migrations ([below](#check-your-platform-in-ci)), so the surest source is a throwaway database built the same
+way. A long-lived database (a developer's copy, or production) can differ from the migrations: if `check`
+against it reports a column the catalogue names but the database lacks, that database has drifted from your
+migrations, and the catalogue is not at fault.
 
 ```sh
 QUERY_ENGINE_DATABASE_URL='postgres://query_engine_login:<password>@<host>:5432/<database>' \
@@ -231,8 +252,18 @@ to the engine with the `/api/query` prefix removed. With nginx:
 ```nginx
 location /api/query/ {
     proxy_pass http://127.0.0.1:3100/;
+    # Send on only what the engine reads. nginx otherwise passes every request header,
+    # including the platform's cookies, the referring page and the browser's name.
+    proxy_pass_request_headers off;
+    proxy_set_header Accept $http_accept;
+    proxy_set_header Content-Type $content_type;
 }
 ```
+
+With this block the engine receives only `Accept`, `Content-Type`, `Content-Length` (nginx sets it for a
+body) and `Host`, and the body unchanged (checked with nginx 1.30.8). nginx's time limit for an answer,
+`proxy_read_timeout`, is 60 s by default, above the engine's [statement timeout](#statement-timeout); if you
+raise the statement timeout towards 60 s, raise `proxy_read_timeout` too.
 
 Keep the engine itself reachable only from the host (the default `127.0.0.1`, or the compose example's
 `127.0.0.1:3100` port binding). The engine has no authentication of its own: it can serve only what its
@@ -242,6 +273,23 @@ route if that data is not public.
 The proxy also decides whether people can use the queries at all: the query routes are `/v1/...`
 ([API reference](api-reference.md)), and a host that keeps the feature off (behind a feature flag, say)
 leaves the route out, or forwards only `/api/query/health`.
+
+### Forwarding from the host's own app instead
+
+A host can forward the route from its own application server instead of nginx, for example to put it behind
+the app's feature flag, or because its development set-up has no nginx. The forwarder should:
+
+- remove the `/api/query` prefix and keep the rest of the path and the query string;
+- pass the method and the body through unread and unchanged, before any body parser runs;
+- pass on only `Content-Type`, `Accept` and `Content-Length` (or `Transfer-Encoding`), never cookies,
+  `Authorization`, the referring page or the client's address;
+- pass back the engine's status, body and headers, except those that belong to one connection
+  (`Connection`, `Keep-Alive`, `Transfer-Encoding` and the like) and any `Set-Cookie`;
+- answer in the engine's own error shape, `{"error": "<plain-English message>"}`, when the engine cannot be
+  reached (502) or does not answer within a time limit above the statement timeout (504);
+- cut the browser's answer off if the engine's is cut off part-way, and close the request to the engine if
+  the browser gives up;
+- log no body: a plan carries the area a person is looking at.
 
 ## Check your platform in CI
 
@@ -262,14 +310,68 @@ platform's CI, after building a throwaway PostGIS database from your migrations,
 (with the catalogue committed at `query-engine/catalogue.json`):
 
 ```sh
-git clone https://github.com/GeorgeAgyenim/ccrp-query-engine.git ccrp-query-engine   # pin a release tag
+git clone https://github.com/GeorgeAgyenim/ccrp-query-engine.git ccrp-query-engine
+git -C ccrp-query-engine checkout <commit>   # the engine commit (later, release tag) your platform is pinned to
 cd ccrp-query-engine && npm ci --omit=dev
 QUERY_ENGINE_DATABASE_URL="$DATABASE_URL" QUERY_ENGINE_CATALOGUE_FILE=../query-engine/catalogue.json \
   node src/cli.ts check
 ```
 
-`$DATABASE_URL` is the throwaway database's URL, from your CI's database service. To also catch definitions that changed without a new
-catalogue, regenerate the catalogue into a temporary file and compare it with the committed one.
+`$DATABASE_URL` is the throwaway database's URL, from your CI's database service. Until releases begin
+([Releases](#releases)), pin a commit of `main`, and move the pin when you upgrade the engine. To also catch
+definitions that changed without a new catalogue, regenerate the catalogue into a temporary file and compare
+it with the committed one.
+
+The engine needs its own Node.js version (`.nvmrc`), which may differ from your platform's. Node.js 26
+needs the system library `libatomic`, which the `postgis/postgis` images lack, so run these steps on the CI
+runner itself, with the database as a service, not inside a database image used as the job's container.
+
+An example GitHub Actions job, for a platform whose migrations are `migrations/*.up.sql`, applied in file-name
+order as colouring-core's README applies them:
+
+```yaml
+jobs:
+  query-engine-check:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgis/postgis:18-3.6   # your production database's major versions
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust   # a throwaway server only this job can reach
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U postgres" --health-interval 5s --health-retries 20
+    env:
+      PGHOST: 127.0.0.1
+      PGUSER: postgres
+      QUERY_ENGINE_DATABASE_URL: postgres://postgres@127.0.0.1:5432/platform
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
+        with:
+          repository: GeorgeAgyenim/ccrp-query-engine
+          ref: <commit>
+          path: ccrp-query-engine
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: ccrp-query-engine/.nvmrc
+      - name: Build a database from the platform's migrations
+        run: |
+          command -v psql || { sudo apt-get update && sudo apt-get install -y postgresql-client; }
+          export LC_ALL=C   # the same file-name order on every machine
+          psql -d postgres -c "CREATE DATABASE platform"
+          psql -d platform -c "CREATE EXTENSION postgis; CREATE EXTENSION pgcrypto; CREATE EXTENSION pg_trgm;"
+          for migration in migrations/*.up.sql; do psql -q -d platform -f "$migration"; done
+      - working-directory: ccrp-query-engine
+        run: |
+          npm ci --omit=dev
+          QUERY_ENGINE_CATALOGUE_FILE=../query-engine/catalogue.json node src/cli.ts check
+          node src/cli.ts catalogue --definitions ../app/src/frontend/config/data-fields-config.ts \
+            --output "$RUNNER_TEMP/catalogue.json"
+          diff -u ../query-engine/catalogue.json "$RUNNER_TEMP/catalogue.json"
+```
+
+(colouring-core's migrations include a statement that fails harmlessly, a constraint added twice, so the
+loop lets psql carry on past a failed statement, as the `psql < $migration` loop in core's README does.)
 
 ## Upgrading
 
