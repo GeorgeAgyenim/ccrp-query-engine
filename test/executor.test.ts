@@ -56,6 +56,14 @@ describe('executor, as the engine login', () => {
       executor.read((query) => query("COMMIT; UPDATE geometries SET source_id = 'changed' WHERE geometry_id = 900001")),
       { code: '42601' }, // syntax_error: one statement per query
     );
+    // Ending the transaction with a separate statement leaves the connection read-only too.
+    await assert.rejects(
+      executor.read(async (query) => {
+        await query('COMMIT');
+        return query('UPDATE geometries SET source_id = $1 WHERE geometry_id = $2', ['changed', 900001]);
+      }),
+      { code: '25006' }, // read_only_sql_transaction
+    );
     const [row] = await executor.read((query) =>
       query('SELECT source_id FROM geometries WHERE geometry_id = $1', [900001]),
     );
@@ -82,6 +90,21 @@ describe('executor statement timeout', () => {
 
       const [row] = await executor.read((query) => query('SELECT 1 AS one'));
       assert.equal(row?.['one'], 1);
+    } finally {
+      await executor.close();
+    }
+  });
+
+  test('still times out a statement run after the transaction was ended early', async () => {
+    const executor = createExecutor({ databaseUrl: env.mainEngineUrl, statementTimeoutMs: 200 });
+    try {
+      await assert.rejects(
+        executor.read(async (query) => {
+          await query('COMMIT');
+          return query('SELECT pg_sleep(10)');
+        }),
+        QueryTimeoutError,
+      );
     } finally {
       await executor.close();
     }
