@@ -111,7 +111,7 @@ to start if its login can read or change more than the role allows (below).
 The engine queries only the building attributes your platform defines and shows in its categories
 ([ADR-0002](decisions/0002-fields-come-from-the-host-field-definitions.md)). It learns them from a catalogue
 file you generate from your own field definitions, `app/src/frontend/config/data-fields-config.ts`, and your
-database's column types ([ADR-0009](decisions/0009-field-catalogue-file-format-and-commands.md), proposed).
+database's column types ([ADR-0009](decisions/0009-field-catalogue-file-format-and-commands.md)).
 
 Generate it, from the engine's directory, against a database with your current schema (any login can read the
 column types; the engine's own is fine):

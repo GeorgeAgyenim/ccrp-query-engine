@@ -3,8 +3,8 @@
 The engine's HTTP API. A host's UI reaches it through the host's reverse-proxy route `/api/query/*`, which
 forwards to the engine with that prefix removed ([host setup](host-setup.md#reverse-proxy)), so
 `GET /api/query/v1/catalogue` on the host is `GET /v1/catalogue` on the engine. Paths below are the engine's
-own. Decided in [ADR-0011](decisions/0011-http-api-v1-routes-and-answer.md) (proposed); the plan format in
-[ADR-0010](decisions/0010-plan-format-1-json-shape.md) (proposed).
+own. Decided in [ADR-0011](decisions/0011-http-api-v1-routes-and-answer.md); the plan format in
+[ADR-0010](decisions/0010-plan-format-1-json-shape.md).
 
 Status: pre-release, API version 1. A plan's area is the current view; its steps are filters; its output is a
 number.

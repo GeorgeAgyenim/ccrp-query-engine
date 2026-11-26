@@ -1,10 +1,10 @@
 # ADR-0010: Plan format 1.0.0: a viewport area, filter steps in a CQL2-JSON subset, and a number output
 
-- Status: Proposed (one-way door: builders, the assistant, shared links and the research benchmark write
+- Status: Accepted 2026-11-26 (one-way door: builders, the assistant, shared links and the research benchmark write
   plans in this shape)
 - Date: 2026-11-26
 - Origin: new in the engine repository (query-engine ticket 02); makes ADR-0003 concrete
-- Deciders: proposed by Claude (Anthropic) as engineer; awaiting the product owner
+- Deciders: proposed by Claude (Anthropic) as engineer; accepted by the product owner 2026-11-26
 - Related: ADR-0002 (field catalogue), ADR-0003 (plan format), ADR-0005 (membership), ADR-0009 (catalogue)
 
 ## Context
