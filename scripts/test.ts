@@ -33,7 +33,7 @@ import {
 } from '../test/support/databases.ts';
 
 // Loaded in this order into the main test database. Each is test/fixtures/<name>.sql.
-const FIXTURES = ['buildings', 'host-private-tables'];
+const FIXTURES = ['buildings', 'host-private-tables', 'count-in-view'];
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 

@@ -28,7 +28,7 @@ if (!result.ok) {
     await executor.close();
     refuseToStart(problems);
   } else {
-    const app = buildServer({ executor });
+    const app = buildServer({ executor, catalogue, statementTimeoutMs: settings.statementTimeoutMs });
     const shutDown = async () => {
       await app.close();
       await executor.close();
