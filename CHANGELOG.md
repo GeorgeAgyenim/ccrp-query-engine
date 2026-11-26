@@ -36,5 +36,7 @@ settings; each change is listed here with what a host must do.
 
 ### Changed
 
+- Contributor rules (safety, conventions, tests) now live in [CONTRIBUTING.md](CONTRIBUTING.md). Files
+  used only by AI coding agents, such as `CLAUDE.md`, are no longer part of the repository.
 - The README is now a short overview and setup guide for platforms. How to run the tests moved to the
   [testing guide](docs/testing.md).

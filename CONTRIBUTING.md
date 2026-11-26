@@ -1,7 +1,55 @@
 # Contributing
 
-Thank you for helping. This file covers branches, commits and pull requests; [CLAUDE.md](CLAUDE.md) holds
-the safety rules, conventions and testing notes, for people and AI agents alike.
+Thank you for helping. Every change follows the rules below. The [glossary](CONTEXT.md) defines the terms used
+in code, tests and docs.
+
+## Safety rules
+
+This repository is **public**. Every commit, fixture, doc, issue and log line is published.
+
+- **No instance data**: no host's building records, counts, place names, settings values, credentials or
+  personal data, anywhere. Fixtures are hand-made synthetic data (see `test/fixtures/`: made-up squares at
+  0°N 0°E, `example.invalid` addresses).
+- **Instance-neutral code**: the code names no instance. Instance facts arrive as configuration and data.
+- **Parameters only**: SQL takes values as `$1` parameters. Identifiers come from the code or, later, the
+  field catalogue and layer registry; DDL that cannot take parameters quotes with `escapeIdentifier`.
+- **Least privilege**: the service reads through its engine login and the executor only
+  (`src/executor.ts`). A change that needs more database access changes the migration grants and
+  [ADR-0007](docs/decisions/0007-engine-schema-role-and-migrations.md) first.
+- **Safe logs** ([ADR-0008](docs/decisions/0008-log-errors-without-personal-data.md)): log errors with
+  `describeError` (`src/safe-log.ts`): name, code, stack frames. Request logs carry method, route pattern,
+  status and duration. What a person sent, their address, the database URLs and database messages stay
+  out. One exception: the migrate command shows the operator the database's message for a failed
+  migration statement, which describes the engine's own DDL.
+- **Failing tests get fixed**: a red test is a finding. Fix the code, or the test if it is wrong, and say
+  which.
+
+## Conventions
+
+- Node 26 runs the `.ts` sources directly; `tsc` only type-checks. So: erasable TypeScript only (no enums,
+  namespaces or parameter properties), and local imports end in `.ts`.
+- Dependencies are exact versions. Add one only when the standard library or an existing dependency cannot
+  do the job, and record it in the [tools inventory](docs/tools-inventory.md).
+- Engine migrations: `migrations/NNN.lower-case-words.up.sql` with a matching `.down.sql`. A migration that
+  creates a table in `query_engine` grants `SELECT` on it to `query_engine_reader` (a test checks).
+- Settings are `QUERY_ENGINE_*` environment variables, read only in `src/settings.ts` (messages use its
+  name constants) and documented in the [host setup guide](docs/host-setup.md#settings).
+- A decision that is hard to reverse (the plan format, the HTTP API, the database schema, a role or setting
+  name) gets a decision record in `docs/decisions/` before it is implemented.
+- The README stays brief: an overview, status, requirements, setup steps, how to run the tests, and links.
+  Everything else goes in `docs/`.
+
+## Tests
+
+How to run them: the [testing guide](docs/testing.md).
+
+- Tests sit at the seams a caller can observe: the service over HTTP and as a process
+  (`test/service.test.ts`), the executor as the engine login (`test/executor.test.ts`), and the migrate
+  command and the role's privileges (`test/engine-role.test.ts`).
+- All run against a real PostGIS database. Expected values are hand-written literals.
+- New fixtures go in `test/fixtures/<name>.sql` and in the `FIXTURES` list in `scripts/test.ts`.
+- The test database is built from colouring-core's migrations at the commit pinned in
+  `scripts/core-migrations.ts`. Changing that commit means updating the tools inventory too.
 
 ## Branches
 
@@ -25,19 +73,10 @@ by hyphens. Never commit straight to `main`.
 ## Pull requests
 
 - The title or first line cites `query-engine ticket NN`.
-- `npm run typecheck` and `npm test` pass (CI runs both, plus the image build). The
-  [testing guide](docs/testing.md) shows how to run them.
+- `npm run typecheck` and `npm test` pass (CI runs both, plus the image build).
 - Docs change in the same pull request as the code: the [API reference](docs/api-reference.md), the
   [host setup guide](docs/host-setup.md), the [changelog](CHANGELOG.md) under *Unreleased*, and the
   [tools inventory](docs/tools-inventory.md) for any new or changed dependency.
-- A decision that is hard to reverse (the plan format, the HTTP API, the database schema, a role or setting
-  name) gets a decision record in `docs/decisions/` before it is implemented.
-
-## Safety rules
-
-This repository is public. The [safety rules in CLAUDE.md](CLAUDE.md#safety-rules) bind every contribution:
-no instance data, credentials or personal data; instance-neutral code; SQL values as parameters; least
-privilege; logs without what people sent; failing tests fixed, not silenced.
 
 ## Licence
 

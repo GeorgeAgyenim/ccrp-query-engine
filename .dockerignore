@@ -8,3 +8,6 @@ docs
 tasks
 .env
 .env.*
+CLAUDE.md
+AGENTS.md
+.claude
