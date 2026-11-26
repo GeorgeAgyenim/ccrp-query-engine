@@ -41,7 +41,7 @@ if (!serverAdminUrl) {
     `${TEST_VARIABLES.serverAdminUrl} is not set, so there is no test database and the suite cannot run.\n` +
       'Set it to a superuser URL for a disposable PostGIS server, for example\n' +
       `  ${TEST_VARIABLES.serverAdminUrl}=postgres://postgres@127.0.0.1:5432/postgres npm test\n` +
-      'README.md shows how to start one with Docker.',
+      'docs/testing.md shows how to start one with Docker.',
   );
   process.exit(1);
 }
