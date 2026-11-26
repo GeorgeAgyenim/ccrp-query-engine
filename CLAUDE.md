@@ -46,9 +46,9 @@ This repository is **public**. Every commit, fixture, doc, issue and log line is
 
 ## Testing
 
-How to run the suite: [docs/testing.md](docs/testing.md). Keep README.md a guide for human readers:
-what the engine is, its status, how to try it and where the docs are. Testing detail, implementation notes
-and working notes belong in docs/, never in the README.
+How to run the suite: [docs/testing.md](docs/testing.md). Keep README.md brief: a short overview of
+the repo, its status, requirements, the steps to set it up with a platform, how to run the tests, and links.
+Product reasoning, testing detail, implementation notes and working notes belong in docs/, never in the README.
 
 Tests sit at the seams a caller can observe: the service over HTTP and as a process (`test/service.test.ts`),
 the executor as the engine login (`test/executor.test.ts`), the migrate command and the role's privileges
