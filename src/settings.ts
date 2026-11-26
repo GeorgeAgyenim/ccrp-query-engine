@@ -1,5 +1,6 @@
-// The service's settings, read from its environment. Names and defaults are documented in
-// docs/host-setup.md#settings; keep the two in step. Values are never logged or printed.
+// The engine's settings, read from its environment. Names and defaults are documented in
+// docs/host-setup.md#settings; keep the two in step. The database URLs, which hold
+// credentials, are never logged or printed.
 
 export interface Settings {
   /** PostgreSQL URL of the engine's own login. Point it at a database copy to query the copy. */
@@ -18,6 +19,27 @@ export const SETTING_NAMES = {
   host: 'QUERY_ENGINE_HOST',
   port: 'QUERY_ENGINE_PORT',
 } as const satisfies Record<keyof Settings, string>;
+
+/** Read only by the migrate command: the database owner's login, which the service never holds. */
+export const MIGRATION_DATABASE_URL = 'QUERY_ENGINE_MIGRATION_DATABASE_URL';
+
+export type MigrationSettingsResult = { ok: true; databaseUrl: string } | { ok: false; problem: string };
+
+export function readMigrationSettings(env: Record<string, string | undefined>): MigrationSettingsResult {
+  const databaseUrl = env[MIGRATION_DATABASE_URL] ?? '';
+  if (databaseUrl === '') {
+    return {
+      ok: false,
+      problem:
+        `${MIGRATION_DATABASE_URL} is not set. Set it to a postgres:// URL for a login that owns the host's ` +
+        'buildings and geometries tables and can create roles (see docs/host-setup.md).',
+    };
+  }
+  if (!isPostgresUrl(databaseUrl)) {
+    return { ok: false, problem: `${MIGRATION_DATABASE_URL} is not a postgres:// or postgresql:// URL.` };
+  }
+  return { ok: true, databaseUrl };
+}
 
 export const DEFAULT_STATEMENT_TIMEOUT_MS = 10_000;
 export const DEFAULT_HOST = '127.0.0.1';

@@ -7,9 +7,11 @@
 // buildings and geometries tables and can create roles. The service never uses it.
 // See docs/host-setup.md.
 
+import { connectionProblem } from './connection-problems.ts';
 import { MigrationError, migrateDown, migrateUp, migrationStatus } from './migrations.ts';
+import { describeError, errorCode } from './safe-log.ts';
+import { MIGRATION_DATABASE_URL, readMigrationSettings } from './settings.ts';
 
-const MIGRATION_URL = 'QUERY_ENGINE_MIGRATION_DATABASE_URL';
 const USAGE = 'Usage: node src/cli.ts migrate up|down|status';
 
 async function main(args: string[]): Promise<number> {
@@ -18,39 +20,41 @@ async function main(args: string[]): Promise<number> {
     console.error(USAGE);
     return 2;
   }
-  const databaseUrl = process.env[MIGRATION_URL];
-  if (!databaseUrl) {
-    console.error(
-      `${MIGRATION_URL} is not set. Set it to a PostgreSQL URL for a login that owns the host's ` +
-        'buildings and geometries tables and can create roles (see docs/host-setup.md).',
-    );
+  const settings = readMigrationSettings(process.env);
+  if (!settings.ok) {
+    console.error(settings.problem);
     return 1;
   }
 
   if (action === 'up') {
-    const applied = await migrateUp(databaseUrl);
+    const applied = await migrateUp(settings.databaseUrl);
     console.log(applied.length === 0 ? 'Nothing to apply: the database is up to date.' : `Applied ${applied.join(', ')}.`);
   } else if (action === 'down') {
-    const reverted = await migrateDown(databaseUrl);
+    const reverted = await migrateDown(settings.databaseUrl);
     console.log(reverted === null ? 'Nothing to revert: no engine migration is applied.' : `Reverted ${reverted}.`);
   } else {
-    const status = await migrationStatus(databaseUrl);
+    const status = await migrationStatus(settings.databaseUrl);
     console.log(`Applied: ${status.applied.join(', ') || 'none'}`);
     console.log(`Pending: ${status.pending.join(', ') || 'none'}`);
   }
   return 0;
 }
 
-// The operator's own terminal, so the database's message is shown: it is the quickest way to
-// see why a migration failed. Migrations carry no personal data. The URL is never printed.
+// A failed migration statement is shown with the database's own message: it is the quickest
+// way to see why, and it describes the engine's DDL, not anyone's data. A connection failure
+// is shown by code only, because its message can name the login. The URL is never printed.
 function explain(error: unknown): string {
-  const lines: string[] = [];
-  for (let current = error; current instanceof Error; current = current.cause) {
-    const code = (current as { code?: unknown }).code;
-    lines.push(typeof code === 'string' ? `${current.message} (${code})` : current.message);
-    if (!(current instanceof MigrationError)) break;
+  const connection = connectionProblem(error, MIGRATION_DATABASE_URL);
+  if (connection !== undefined) return `Could not run the migrate command: ${connection}`;
+  if (error instanceof MigrationError) {
+    const cause = error.cause;
+    if (cause === undefined) return error.message;
+    const code = errorCode(cause);
+    const detail = cause instanceof Error ? cause.message : String(cause);
+    return `${error.message}\n  caused by: ${detail}${code === undefined ? '' : ` (${code})`}`;
   }
-  return lines.join('\n  caused by: ') || String(error);
+  const { name, code } = describeError(error);
+  return `The migrate command failed: ${name}${code === undefined ? '' : ` (${code})`}.`;
 }
 
 try {

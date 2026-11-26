@@ -3,10 +3,13 @@
 // migration 001 creates. See docs/decisions/0007-engine-schema-role-and-migrations.md.
 
 import { readdir, readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
+import { CONNECT_TIMEOUT_MS } from './executor.ts';
+import { EngineError } from './safe-log.ts';
 
-export const MIGRATIONS_DIRECTORY = fileURLToPath(new URL('../migrations/', import.meta.url));
+const MIGRATIONS_DIRECTORY = fileURLToPath(new URL('../migrations/', import.meta.url));
 
 // Any fixed number works; it only has to be the same for every run of the migrate command.
 const MIGRATION_LOCK_KEY = 7_302_001;
@@ -17,12 +20,14 @@ export interface Migration {
   downFile: string;
 }
 
-export class MigrationError extends Error {
+/** Its messages name migrations and files only, never data. */
+export class MigrationError extends EngineError {
   override name = 'MigrationError';
 }
 
 /** The migrations this engine version ships, in the order they apply. */
-export async function listMigrations(directory = MIGRATIONS_DIRECTORY): Promise<Migration[]> {
+export async function listMigrations(): Promise<Migration[]> {
+  const directory = MIGRATIONS_DIRECTORY;
   const files = await readdir(directory);
   const ups = files.filter((file) => file.endsWith('.up.sql')).sort();
   return ups.map((upFile) => {
@@ -34,7 +39,7 @@ export async function listMigrations(directory = MIGRATIONS_DIRECTORY): Promise<
     if (!files.includes(downFile)) {
       throw new MigrationError(`Migration ${id} has no ${downFile}`);
     }
-    return { id, upFile: `${directory}${upFile}`, downFile: `${directory}${downFile}` };
+    return { id, upFile: join(directory, upFile), downFile: join(directory, downFile) };
   });
 }
 
@@ -131,7 +136,9 @@ async function inTransaction(client: pg.Client, id: string, work: () => Promise<
     await work();
     await client.query('COMMIT');
   } catch (error) {
-    await client.query('ROLLBACK');
+    // If the connection is gone, ROLLBACK fails too, and the server has already rolled the
+    // transaction back. Keep the original error: it says why.
+    await client.query('ROLLBACK').catch(() => {});
     throw new MigrationError(`Migration ${id} failed and was rolled back; nothing from it was applied`, {
       cause: error,
     });
@@ -144,13 +151,15 @@ async function withMigrationLock<T>(databaseUrl: string, work: (client: pg.Clien
     try {
       return await work(client);
     } finally {
-      await client.query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK_KEY]);
+      // Closing the connection releases the lock anyway, so a failed unlock must not hide
+      // the outcome of the work.
+      await client.query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK_KEY]).catch(() => {});
     }
   });
 }
 
 async function withClient<T>(databaseUrl: string, work: (client: pg.Client) => Promise<T>): Promise<T> {
-  const client = new pg.Client({ connectionString: databaseUrl });
+  const client = new pg.Client({ connectionString: databaseUrl, connectionTimeoutMillis: CONNECT_TIMEOUT_MS });
   await client.connect();
   try {
     return await work(client);
